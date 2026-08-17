@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "echo word",
+  "version": "0.2.0",
+  "description": "悬停英文单词即弹出卡片并朗读，通过发音在句子的语感中学会单词。",
+  "permissions": ["tts", "storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "echo word 设置"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

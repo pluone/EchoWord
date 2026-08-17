@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Claude Code 本地配置（机器相关，不入库）
+.claude/settings.local.json
+
+# Chrome 扩展打包产物
+*.zip

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="options.css" />
+  <title>echo word 设置</title>
+</head>
+<body>
+  <main>
+    <h1>echo word 设置</h1>
+
+    <section class="field">
+      <label for="voice">朗读声音</label>
+      <div class="voice-row">
+        <select id="voice"></select>
+        <button id="preview" type="button">试听</button>
+        <button id="exclude" type="button">剔除</button>
+      </div>
+      <p id="sampleText" class="sample" hidden></p>
+      <p class="hint" id="voiceHint"></p>
+    </section>
+
+    <section class="field">
+      <button
+        type="button"
+        id="excludedToggle"
+        class="excluded-toggle"
+        aria-expanded="false"
+      >
+        <span class="excluded-arrow" aria-hidden="true">▶</span>
+        <span>已剔除声音</span>
+        <span id="excludedCount" class="excluded-count"></span>
+      </button>
+      <div id="excludedBody" class="excluded-body" hidden>
+        <ul id="excludedList" class="excluded-list"></ul>
+        <p class="hint" id="excludedHint"></p>
+      </div>
+    </section>
+
+    <section class="field">
+      <div class="field-head">
+        <label for="volume">音量</label>
+        <output id="volumeValue" for="volume">100%</output>
+      </div>
+      <input type="range" id="volume" min="0" max="100" step="1" value="100" />
+      <div class="ticks" id="volumeTicks"></div>
+    </section>
+
+    <section class="field">
+      <div class="field-head">
+        <label for="rate">播放速度</label>
+        <output id="rateValue" for="rate">1.0×</output>
+      </div>
+      <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1" />
+      <div class="ticks" id="rateTicks"></div>
+    </section>
+
+    <section class="field">
+      <label for="hoverDelay">悬停弹出延迟</label>
+      <select id="hoverDelay">
+        <option value="0">立即（不推荐）</option>
+        <option value="100">0.1 秒（不推荐）</option>
+        <option value="300">0.3 秒</option>
+        <option value="600">0.6 秒（默认）</option>
+        <option value="1000">1.0 秒</option>
+        <option value="1500">1.5 秒</option>
+      </select>
+    </section>
+
+    <section class="field">
+      <div class="checkbox-row">
+        <input type="checkbox" id="autoSpeak" />
+        <label for="autoSpeak">弹窗出现后自动播放发音</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="sentenceSpeak" />
+        <label for="sentenceSpeak">使用 TTS 朗读整句，而非单个单词</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="stickyPopup" />
+        <label for="stickyPopup">仅在点击外部、点击 X 图标或按 Esc 时关闭弹窗</label>
+      </div>
+    </section>
+
+    <section class="field">
+      <label for="previewText">自定义试听</label>
+      <textarea
+        id="previewText"
+        rows="3"
+        placeholder="输入或粘贴一段文字，点击「播放」用当前选中的声音朗读试听……"
+      ></textarea>
+      <button type="button" id="previewCustom" class="preview-custom">▶ 播放</button>
+    </section>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>
