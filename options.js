@@ -16,7 +16,7 @@ const volumeTicks = document.getElementById('volumeTicks');
 const rateTicks = document.getElementById('rateTicks');
 const previewText = document.getElementById('previewText');
 const previewCustom = document.getElementById('previewCustom');
-const hoverDelaySelect = document.getElementById('hoverDelay');
+const hoverDelayRadios = document.querySelectorAll('input[name="hoverDelay"]');
 const autoSpeakInput = document.getElementById('autoSpeak');
 const sentenceSpeakInput = document.getElementById('sentenceSpeak');
 const stickyPopupInput = document.getElementById('stickyPopup');
@@ -188,7 +188,9 @@ async function loadVolumeRate() {
 
 async function loadHoverOptions() {
   const cfg = await chrome.storage.local.get(DEFAULTS);
-  hoverDelaySelect.value = String(cfg.hoverDelay);
+  for (const radio of hoverDelayRadios) {
+    radio.checked = radio.value === String(cfg.hoverDelay);
+  }
   autoSpeakInput.checked = !!cfg.autoSpeak;
   sentenceSpeakInput.checked = !!cfg.sentenceSpeak;
   stickyPopupInput.checked = !!cfg.stickyPopup;
@@ -237,9 +239,13 @@ rateInput.addEventListener('input', () => {
   chrome.storage.local.set({ rate: v });
 });
 
-hoverDelaySelect.addEventListener('change', () => {
-  chrome.storage.local.set({ hoverDelay: Number(hoverDelaySelect.value) });
-});
+for (const radio of hoverDelayRadios) {
+  radio.addEventListener('change', () => {
+    if (radio.checked) {
+      chrome.storage.local.set({ hoverDelay: Number(radio.value) });
+    }
+  });
+}
 
 autoSpeakInput.addEventListener('change', () => {
   chrome.storage.local.set({ autoSpeak: autoSpeakInput.checked });

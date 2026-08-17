@@ -99,8 +99,8 @@ function debugVoices() {
 chrome.runtime.onInstalled.addListener(debugVoices);
 debugVoices();
 
-// 点击工具栏图标打开设置页。
-chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
+// 点击工具栏图标打开 popup.html（见 manifest 的 action.default_popup），
+// 完整设置由弹窗内的「打开完整设置」入口进入。
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'speak') {

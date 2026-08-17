@@ -3,12 +3,13 @@
   "name": "echo word",
   "version": "0.2.0",
   "description": "悬停英文单词即弹出卡片并朗读，通过发音在句子的语感中学会单词。",
-  "permissions": ["tts", "storage"],
+  "permissions": ["tts", "storage", "activeTab"],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "echo word 设置"
+    "default_title": "echo word",
+    "default_popup": "popup.html"
   },
   "options_ui": {
     "page": "options.html",

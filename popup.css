@@ -1,0 +1,161 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  width: 300px;
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.brand {
+  font-weight: 600;
+}
+
+.site {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.site-host {
+  font-size: 12px;
+  color: #888;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(52, 168, 83, 0.15);
+  color: #2e9e49;
+  flex: none;
+}
+
+.badge.off {
+  background: rgba(200, 60, 60, 0.12);
+  color: #c0392b;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.row-title {
+  font-weight: 600;
+}
+
+.row-desc {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
+/* 开关：覆盖在轨道上的透明 checkbox 负责点击与键盘操作。 */
+.switch {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 40px;
+  height: 22px;
+}
+
+.switch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.switch .track {
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  background: #bdbdbd;
+  transition: background 0.15s ease;
+}
+
+.switch .thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.switch input:checked + .track {
+  background: #34a853;
+}
+
+.switch input:checked + .track .thumb {
+  transform: translateX(18px);
+}
+
+.switch input:disabled {
+  cursor: default;
+}
+
+.switch input:disabled + .track {
+  opacity: 0.4;
+}
+
+.hint {
+  font-size: 12px;
+  color: #999;
+  margin: 10px 0 0;
+}
+
+.popup-footer {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #2e7ff0;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+@media (prefers-color-scheme: dark) {
+  .switch .track {
+    background: #555;
+  }
+
+  .site-host,
+  .row-desc,
+  .hint {
+    color: #999;
+  }
+}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="popup.css" />
+  <title>echo word</title>
+</head>
+<body>
+  <header class="popup-header">
+    <span class="brand">echo word</span>
+    <span class="site">
+      <span class="site-host" id="site"></span>
+      <span class="badge" id="badge"></span>
+    </span>
+  </header>
+
+  <section class="row">
+    <div class="row-text">
+      <div class="row-title">在此网站启用</div>
+      <div class="row-desc">关闭后悬停单词不再朗读</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="enabled" aria-label="在此网站启用" />
+      <span class="track"><span class="thumb"></span></span>
+    </label>
+  </section>
+
+  <p class="hint" id="hint" hidden></p>
+
+  <footer class="popup-footer">
+    <button type="button" id="openOptions" class="link-btn">打开完整设置</button>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

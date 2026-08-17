@@ -18,11 +18,17 @@ const DEFAULT_OPTIONS = {
 const WORD_CHAR = /[A-Za-z0-9'’\-]/;
 const HAS_ALNUM = /[A-Za-z0-9]/;
 
+// 光标吸附容差：caretPositionFromPoint 会把空白处的光标吸附到最近的文本，
+// 只要光标落在单词包围盒外这个距离以内，仍视为悬停在单词上。
+const POINT_TOLERANCE = 6; // px
+
 let cfg = { ...DEFAULT_OPTIONS };
 let currentWord = null; // { word, node, start, end, x, y }
 let showTimer = null;
 let hideTimer = null;
 let visible = false;
+let enabled = false; // 当前站点是否启用，随站点开关实时更新
+const HOSTNAME = (location.hostname || '').toLowerCase();
 
 // ---------- 弹窗宿主与 Shadow DOM ----------
 
@@ -156,7 +162,35 @@ function wordAtPoint(x, y) {
 
   const word = text.slice(start, end);
   if (!word || !HAS_ALNUM.test(word)) return null;
-  return { word, node: pos.node, start, end };
+
+  // caretPositionFromPoint 会把空白处（左右页边、行间）的光标吸附到最近的文本，
+  // 若不校验几何位置，鼠标在阅读区两侧空白与单词所在行平行时也会误触发朗读。
+  const rect = rangeRect(pos.node, start, end);
+  if (
+    rect &&
+    (x < rect.left - POINT_TOLERANCE ||
+      x > rect.right + POINT_TOLERANCE ||
+      y < rect.top - POINT_TOLERANCE ||
+      y > rect.bottom + POINT_TOLERANCE)
+  ) {
+    return null;
+  }
+
+  return { word, node: pos.node, start, end, rect };
+}
+
+// 文本范围 [start, end) 的包围盒；无法测量时返回 null。
+function rangeRect(node, start, end) {
+  try {
+    const range = document.createRange();
+    range.setStart(node, start);
+    range.setEnd(node, end);
+    const r = range.getBoundingClientRect();
+    if (r && (r.width || r.height)) return r;
+  } catch (e) {
+    // 忽略异常，由调用方决定兜底。
+  }
+  return null;
 }
 
 // ---------- 整句提取 ----------
@@ -366,17 +400,9 @@ function renderPopup(word) {
 }
 
 // 取单词的包围盒，用于把弹窗定位到单词正上方并水平居中。
+// wordAtPoint 已算过 rect，直接复用，避免重复测量。
 function wordRect(info) {
-  try {
-    const range = document.createRange();
-    range.setStart(info.node, info.start);
-    range.setEnd(info.node, info.end);
-    const r = range.getBoundingClientRect();
-    if (r && (r.width || r.height)) return r;
-  } catch (e) {
-    // 忽略异常，退回用光标坐标定位。
-  }
-  return null;
+  return info.rect || rangeRect(info.node, info.start, info.end);
 }
 
 function positionPopup(info) {
@@ -507,6 +533,7 @@ function handleMove(x, y) {
 document.addEventListener(
   'mousemove',
   (event) => {
+    if (!enabled) return; // 当前站点已禁用，不响应悬停。
     // 移到弹窗本体上时保持显示，不重新计算。
     if (event.target === host) {
       clearHide();
@@ -526,7 +553,7 @@ document.addEventListener(
 document.addEventListener(
   'mousedown',
   (event) => {
-    if (!visible) return;
+    if (!enabled || !visible) return;
     const inside = event.composedPath
       ? event.composedPath().includes(host)
       : event.target === host;
@@ -540,6 +567,7 @@ document.addEventListener(
 document.addEventListener(
   'keydown',
   (event) => {
+    if (!enabled) return;
     if (event.key === 'Escape') {
       clearShow();
       hidePopup();
@@ -560,10 +588,33 @@ function applyConfig(next) {
   cfg = { ...DEFAULT_OPTIONS, ...next };
 }
 
-chrome.storage.local.get(DEFAULT_OPTIONS, (items) => applyConfig(items));
+// 当前站点是否在禁用名单中（siteDisabled 为按 hostname 的禁用列表）。
+function isSiteDisabled(list) {
+  return (list || []).some((h) => String(h).toLowerCase() === HOSTNAME);
+}
+
+// 启用 / 禁用当前站点。禁用时立即收起弹窗并清空悬停状态。
+function setEnabled(on) {
+  on = !!on;
+  if (on === enabled) return;
+  enabled = on;
+  if (!on) hidePopup();
+}
+
+// 站点启停与选项都存在 storage.local，首次加载时一并读取。
+chrome.storage.local.get({ ...DEFAULT_OPTIONS, siteDisabled: [] }, (items) => {
+  applyConfig(items);
+  setEnabled(!isSiteDisabled(items.siteDisabled));
+});
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
+
+  // 站点启停变化：实时切换当前页面的启用状态（弹窗里切换后立即生效）。
+  if (changes.siteDisabled) {
+    setEnabled(!isSiteDisabled(changes.siteDisabled.newValue));
+  }
+
   const next = {};
   for (const key of Object.keys(DEFAULT_OPTIONS)) {
     if (changes[key]) next[key] = changes[key].newValue;
