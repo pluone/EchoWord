@@ -24,6 +24,7 @@ const POINT_TOLERANCE = 6; // px
 
 let cfg = { ...DEFAULT_OPTIONS };
 let currentWord = null; // { word, node, start, end, x, y }
+let lastReadSentence = null; // 最近一次自动朗读所属的句子，用于同句内移动时避免重复朗读
 let showTimer = null;
 let hideTimer = null;
 let visible = false;
@@ -387,8 +388,8 @@ function sentenceFromWord(info) {
 
 // ---------- 朗读 ----------
 
-function speakFor(info) {
-  const text = cfg.sentenceSpeak ? sentenceFromWord(info) : info.word;
+function speakFor(info, sentence) {
+  const text = cfg.sentenceSpeak ? sentence || sentenceFromWord(info) : info.word;
   if (!text) return;
   chrome.runtime.sendMessage({ type: 'speak', text }).catch(() => {});
 }
@@ -443,7 +444,18 @@ function showPopup(info) {
   renderPopup(info.word);
   positionPopup(info);
   visible = true;
-  if (cfg.autoSpeak) speakFor(info);
+  if (!cfg.autoSpeak) return;
+  if (!cfg.sentenceSpeak) {
+    // 未开启整句朗读：移到不同单词就直接朗读该单词。
+    speakFor(info);
+    return;
+  }
+  // 整句朗读：同句内移动不重复朗读，仅切换到不同句子时才朗读。
+  const sentence = sentenceFromWord(info);
+  if (sentence !== lastReadSentence) {
+    speakFor(info, sentence);
+    lastReadSentence = sentence;
+  }
 }
 
 function hidePopup() {
@@ -451,6 +463,7 @@ function hidePopup() {
   visible = false;
   setHost('display', 'none');
   currentWord = null;
+  lastReadSentence = null;
   clearShow();
   clearHide();
 }
@@ -521,9 +534,9 @@ function handleMove(x, y) {
   clearHide();
 
   if (visible && cfg.stickyPopup) {
-    // 粘性模式：弹窗已显示，实时切换为新单词（不重复触发自动朗读）。
-    renderPopup(info.word);
-    positionPopup({ ...info, x, y });
+    // 粘性模式：弹窗已显示，切换到新单词同样按「悬停弹出延迟」延时展示；
+    // 是否朗读由 showPopup 依据是否切到不同句子决定。
+    scheduleShow({ ...info, x, y });
     return;
   }
 
