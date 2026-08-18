@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "echo word",
-  "version": "0.2.0",
-  "description": "悬停英文单词即弹出卡片并朗读，通过发音在句子的语感中学会单词。",
-  "permissions": ["tts", "storage", "activeTab"],
+  "version": "0.3.0",
+  "description": "悬停英文单词即弹出卡片，展示音标、释义与例句，并通过发音在句子的语感中学会单词。",
+  "permissions": ["tts", "storage", "activeTab", "offscreen"],
+  "host_permissions": ["https://cn.bing.com/*"],
   "background": {
     "service_worker": "background.js"
   },

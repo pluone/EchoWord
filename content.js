@@ -56,18 +56,18 @@ shadow.innerHTML = `
   .popup {
     position: relative;
     display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 10px 8px 12px;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
     background: #fff;
     color: #1a1a1a;
     border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 8px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 15px;
-    line-height: 1.2;
-    max-width: 60vw;
+    font-size: 14px;
+    line-height: 1.35;
+    max-width: min(60vw, 420px);
     box-sizing: border-box;
   }
   /* 底边中央的向下小尖角，指向下方的单词。 */
@@ -88,10 +88,24 @@ shadow.innerHTML = `
     border-top: none;
     border-bottom: 6px solid #fff;
   }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
   .word {
+    font-size: 15px;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 40vw;
+  }
+  .phons {
+    color: #666;
+    font-size: 13px;
+    white-space: nowrap;
+    margin-left: auto; /* 音标靠右 */
   }
   .btn {
     display: inline-flex;
@@ -110,15 +124,52 @@ shadow.innerHTML = `
   .btn:hover { background: rgba(0, 0, 0, 0.08); }
   .btn svg { width: 16px; height: 16px; display: block; }
   .close { color: #999; }
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding-top: 6px;
+    margin-top: 2px;
+  }
+  .body[hidden] { display: none; }
+  .def-line {
+    font-size: 13px;
+    line-height: 1.4;
+    color: #333;
+  }
+  .def-line .pos {
+    color: #1a73e8;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .ex {
+    margin-top: 2px;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .ex .en { color: #333; }
+  .ex .zh { color: #888; }
 </style>
 <div class="popup">
-  <span class="word"></span>
-  <button class="btn speak" type="button" title="朗读" aria-label="朗读">${SPEAKER_SVG}</button>
-  <button class="btn close" type="button" title="关闭" aria-label="关闭">${CLOSE_SVG}</button>
+  <div class="head">
+    <button class="btn speak" type="button" title="朗读" aria-label="朗读">${SPEAKER_SVG}</button>
+    <span class="word"></span>
+    <span class="phons"></span>
+    <button class="btn close" type="button" title="关闭" aria-label="关闭">${CLOSE_SVG}</button>
+  </div>
+  <div class="body" hidden>
+    <div class="defs"></div>
+    <div class="exs"></div>
+  </div>
 </div>
 `;
 
 const wordEl = shadow.querySelector('.word');
+const phonsEl = shadow.querySelector('.phons');
+const bodyEl = shadow.querySelector('.body');
+const defsEl = shadow.querySelector('.defs');
+const exsEl = shadow.querySelector('.exs');
 const speakBtn = shadow.querySelector('.speak');
 const closeBtn = shadow.querySelector('.close');
 const popupEl = shadow.querySelector('.popup');
@@ -391,13 +442,96 @@ function sentenceFromWord(info) {
 function speakFor(info, sentence) {
   const text = cfg.sentenceSpeak ? sentence || sentenceFromWord(info) : info.word;
   if (!text) return;
-  chrome.runtime.sendMessage({ type: 'speak', text }).catch(() => {});
+  chrome.runtime.sendMessage({ type: 'speak', text }).catch(() => { });
 }
 
 // ---------- 弹窗显示 / 隐藏 ----------
 
 function renderPopup(word) {
   wordEl.textContent = word;
+  phonsEl.textContent = '';
+  defsEl.textContent = '';
+  exsEl.textContent = '';
+  bodyEl.hidden = true;
+}
+
+// ---------- 词典释义 ----------
+//
+// 悬停时向后台请求必应词典释义，异步填充音标 / 释义 / 例句。
+// 结果按单词缓存在本地，避免反复悬停同一单词时重复请求。
+
+const dictCache = new Map(); // 单词 -> 结构化数据（null 表示查无结果，一并缓存）
+
+function lookupDict(word) {
+  if (dictCache.has(word)) return Promise.resolve(dictCache.get(word));
+  return chrome.runtime
+    .sendMessage({ type: 'lookup', word })
+    .then((res) => {
+      console.log('lookupDict', word, JSON.stringify(res));
+      const data = res && res.ok ? res.data : null;
+      dictCache.set(word, data);
+      return data;
+    })
+    .catch(() => {
+      dictCache.set(word, null);
+      return null;
+    });
+}
+
+function loadDict(word) {
+  lookupDict(word).then((data) => {
+    // 弹窗可能已隐藏或已切到别的单词，丢弃过期结果。
+    if (!visible || !currentWord || currentWord.word !== word) return;
+    console.log('loadDict', word, JSON.stringify(data));
+    renderDict(data);
+  });
+}
+
+function renderDict(data) {
+  if (!data) return; // 查无结果：保持仅显示单词
+
+  // 音标：英在前、美在后，与必应页面一致。
+  const phons = [];
+  if (data.uk) phons.push(`英[${data.uk}]`);
+  if (data.us) phons.push(`美[${data.us}]`);
+  phonsEl.textContent = phons.join(' ');
+
+  // 释义：每条一行「词性 + 释义」。
+  defsEl.textContent = '';
+  for (const d of (data.defs || []).slice(0, 4)) {
+    const line = document.createElement('div');
+    line.className = 'def-line';
+    const pos = document.createElement('span');
+    pos.className = 'pos';
+    pos.textContent = d.pos ? d.pos + ' ' : '';
+    const def = document.createElement('span');
+    def.className = 'def';
+    def.textContent = (d.defs || []).join('；');
+    line.append(pos, def);
+    defsEl.appendChild(line);
+  }
+
+  // 例句：英文一行、中文一行，最多一条。
+  exsEl.textContent = '';
+  for (const e of (data.examples || []).slice(0, 1)) {
+    const wrap = document.createElement('div');
+    wrap.className = 'ex';
+    const en = document.createElement('div');
+    en.className = 'en';
+    en.textContent = e.en;
+    const zh = document.createElement('div');
+    zh.className = 'zh';
+    zh.textContent = e.zh;
+    wrap.append(en, zh);
+    exsEl.appendChild(wrap);
+  }
+
+  const hasBody =
+    phonsEl.textContent || defsEl.childNodes.length || exsEl.childNodes.length;
+  bodyEl.hidden = !hasBody;
+
+  // 内容填充后重新定位，保证卡片整体落在视口内。
+  positionPopup(currentWord);
 }
 
 // 取单词的包围盒，用于把弹窗定位到单词正上方并水平居中。
@@ -444,6 +578,7 @@ function showPopup(info) {
   renderPopup(info.word);
   positionPopup(info);
   visible = true;
+  loadDict(info.word);
   if (!cfg.autoSpeak) return;
   if (!cfg.sentenceSpeak) {
     // 未开启整句朗读：移到不同单词就直接朗读该单词。

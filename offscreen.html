@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+</head>
+<body>
+  <!--
+    MV3 service worker 没有 DOMParser，必应词典返回的 HTML 交给这个离屏文档解析。
+    由 background.js 按需创建（reason: DOM_PARSER），生命周期无需手动关闭。
+  -->
+  <script src="offscreen.js"></script>
+</body>
+</html>
