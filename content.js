@@ -143,13 +143,6 @@ shadow.innerHTML = `
     font-weight: 600;
     margin-right: 4px;
   }
-  .ex {
-    margin-top: 2px;
-    font-size: 12.5px;
-    line-height: 1.45;
-  }
-  .ex .en { color: #333; }
-  .ex .zh { color: #888; }
 </style>
 <div class="popup">
   <div class="head">
@@ -160,7 +153,6 @@ shadow.innerHTML = `
   </div>
   <div class="body" hidden>
     <div class="defs"></div>
-    <div class="exs"></div>
   </div>
 </div>
 `;
@@ -169,7 +161,6 @@ const wordEl = shadow.querySelector('.word');
 const phonsEl = shadow.querySelector('.phons');
 const bodyEl = shadow.querySelector('.body');
 const defsEl = shadow.querySelector('.defs');
-const exsEl = shadow.querySelector('.exs');
 const speakBtn = shadow.querySelector('.speak');
 const closeBtn = shadow.querySelector('.close');
 const popupEl = shadow.querySelector('.popup');
@@ -451,13 +442,12 @@ function renderPopup(word) {
   wordEl.textContent = word;
   phonsEl.textContent = '';
   defsEl.textContent = '';
-  exsEl.textContent = '';
   bodyEl.hidden = true;
 }
 
 // ---------- 词典释义 ----------
 //
-// 悬停时向后台请求必应词典释义，异步填充音标 / 释义 / 例句。
+// 悬停时向后台请求必应词典释义，异步填充音标 / 释义。
 // 结果按单词缓存在本地，避免反复悬停同一单词时重复请求。
 
 const dictCache = new Map(); // 单词 -> 结构化数据（null 表示查无结果，一并缓存）
@@ -511,23 +501,7 @@ function renderDict(data) {
     defsEl.appendChild(line);
   }
 
-  // 例句：英文一行、中文一行，最多一条。
-  exsEl.textContent = '';
-  for (const e of (data.examples || []).slice(0, 1)) {
-    const wrap = document.createElement('div');
-    wrap.className = 'ex';
-    const en = document.createElement('div');
-    en.className = 'en';
-    en.textContent = e.en;
-    const zh = document.createElement('div');
-    zh.className = 'zh';
-    zh.textContent = e.zh;
-    wrap.append(en, zh);
-    exsEl.appendChild(wrap);
-  }
-
-  const hasBody =
-    phonsEl.textContent || defsEl.childNodes.length || exsEl.childNodes.length;
+  const hasBody = phonsEl.textContent || defsEl.childNodes.length;
   bodyEl.hidden = !hasBody;
 
   // 内容填充后重新定位，保证卡片整体落在视口内。
