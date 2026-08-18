@@ -512,7 +512,9 @@ function handleMove(x, y) {
   const info = wordAtPoint(x, y);
 
   if (!info) {
-    currentWord = null;
+    // 弹窗尚在显示时（例如光标正移向小喇叭），保留 currentWord 供点击朗读；
+    // 弹窗尚未显示则清除悬停状态。
+    if (!visible) currentWord = null;
     scheduleHide();
     return;
   }
