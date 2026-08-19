@@ -238,6 +238,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
 
+  if (message?.type === 'stop') {
+    chrome.tts.stop();
+    sendResponse({ ok: true });
+    return;
+  }
+
   if (message?.type === 'getVoices') {
     getEnglishVoices().then((voices) => sendResponse({ voices }));
     return true; // 异步响应，保持消息通道

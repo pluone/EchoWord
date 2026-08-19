@@ -24,7 +24,6 @@ const POINT_TOLERANCE = 6; // px
 
 let cfg = { ...DEFAULT_OPTIONS };
 let currentWord = null; // { word, node, start, end }
-let lastReadSentence = null; // 最近一次自动朗读所属的句子，用于同句内移动时避免重复朗读
 let activeSentence = null; // 当前弹窗对应的句子，用于丢弃过期的整句翻译
 let showTimer = null;
 let hideTimer = null;
@@ -445,6 +444,10 @@ function speakFor(info, sentence) {
   chrome.runtime.sendMessage({ type: 'speak', text }).catch(() => { });
 }
 
+function stopSpeaking() {
+  chrome.runtime.sendMessage({ type: 'stop' }).catch(() => { });
+}
+
 // ---------- 弹窗显示 / 隐藏 ----------
 
 function renderPopup(word) {
@@ -616,11 +619,8 @@ function showPopup(info) {
     speakFor(info);
     return;
   }
-  // 整句朗读：同句内移动不重复朗读，仅切换到不同句子时才朗读。
-  if (sentence !== lastReadSentence) {
-    speakFor(info, sentence);
-    lastReadSentence = sentence;
-  }
+  // 整句朗读：每次移动到新单词都朗读所在整句。
+  speakFor(info, sentence);
 }
 
 function hidePopup() {
@@ -628,10 +628,10 @@ function hidePopup() {
   visible = false;
   setHost('display', 'none');
   currentWord = null;
-  lastReadSentence = null;
   activeSentence = null;
   clearShow();
   clearHide();
+  stopSpeaking();
 }
 
 function clearShow() {
