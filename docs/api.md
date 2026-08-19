@@ -64,5 +64,30 @@ https://translate.google.com/translate_tts?ie=UTF-8&q=It%20was%20predicted%20tha
 
 
 ### 必应翻译免费接口
-https://www.bing.com/ttranslatev3?isVertical=1&&IG=CF088859A0394FF5A3A2DB1AA40F38E0&IID=translator.5023.8
-这个接口已经挂了
+
+必应翻译 v3 接口（`ttranslatev3`）不能直接调用，需要先从
+`https://bing.com/translator` 页面抓取 IG、IID 与
+`params_AbusePreventionHelper` 里的 token/key（页面会重定向到实际子域，
+大陆为 `cn.bing.com`），再携带它们 POST 到
+`https://bing.com/ttranslatev3?isVertical=1&IG=...&IID=...`
+（表单字段：fromLang / to / text / token / key）。
+token 有有效期，需定期重新抓取。完整逻辑见 background.js 的
+`bingTranslate`，参考自 github.com/plainheart/bing-translate-api。
+
+示例请求（POST `application/x-www-form-urlencoded`）：
+```
+fromLang=en&to=zh-Hans&text=Hello%20world&token=...&key=...&tryFetchingGenderDebiasedTranslations=true
+```
+
+响应：
+```
+[
+  {
+    "translations": [
+      { "text": "你好，世界", "to": "zh-Hans" }
+    ]
+  }
+]
+```
+
+注意：`ttranslatev3` 会拒绝非浏览器 UA 的请求，扩展里由 Chrome 自动附带。

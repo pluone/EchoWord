@@ -203,15 +203,16 @@ async function lookupWord(word) {
   return data;
 }
 
-// ---------- 整句翻译（谷歌翻译） ----------
+// ---------- 整句翻译（谷歌 / 必应，可在设置里选择） ----------
 //
-// 悬停卡片里的句子中文译文来自谷歌翻译免费接口（见 docs/api.md）。
-// 接口 en→zh，整句传入时返回 sentences[].trans，拼接后即译文。
+// 悬停卡片里的句子中文译文默认来自谷歌翻译免费接口（见 docs/api.md），
+// 也可在设置中切换为必应翻译（v3 接口，见下方 bingTranslate）。
+// 接口 en→zh，整句传入时返回译文。
 
 const TRANSLATE_URL =
   'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh&hl=en-US&dt=t&dt=bd&dt=md&dt=ss&dt=ex&dj=1&source=bubble&q={q}';
 
-async function translateSentence(text) {
+async function googleTranslate(text) {
   const url = TRANSLATE_URL.replace('{q}', encodeURIComponent(text));
   const res = await fetch(url);
   if (!res.ok) return null;
@@ -220,6 +221,95 @@ async function translateSentence(text) {
     .map((s) => (s && typeof s.trans === 'string' ? s.trans : ''))
     .join('');
   return trans || null;
+}
+
+// ---------- 必应翻译（ttranslatev3） ----------
+//
+// 参考 bing-translate-api（github.com/plainheart/bing-translate-api）：
+// 1. 先抓取翻译页面解析 IG、IID 与 params_AbusePreventionHelper
+//    （[token 创建时间戳, token, 有效期毫秒]）。首次从 https://bing.com/translator
+//    发起，跟随重定向后取得实际子域（大陆为 cn.bing.com），之后沿用该子域；
+//    得到的主机同时用于后续的 v3 接口请求。
+// 2. 再向 https://{host}/ttranslatev3 POST 表单拿到译文。
+// token 有有效期，过期后重新抓取一次（成功后缓存）。
+// 注意：ttranslatev3 会拒绝非浏览器 UA 的请求；扩展 service worker 的
+// fetch 默认携带 Chrome 真实 UA，无需手动设置（浏览器禁止覆写该头）。
+
+const BING_TRANSLATOR_URL = 'https://bing.com/translator';
+
+let bingConfig = null; // { host, IG, IID, key, token, tokenExpiryInterval }
+let bingConfigPromise = null;
+
+async function fetchBingConfig() {
+  // 首次用 bing.com，之后沿用已取得的子域（避免每次都重定向）。
+  const url = bingConfig
+    ? `https://${bingConfig.host}/translator`
+    : BING_TRANSLATOR_URL;
+  const res = await fetch(url, { redirect: 'follow' });
+  if (!res.ok) throw new Error(`必应翻译页面 ${res.status}`);
+  const html = await res.text();
+
+  // 跳转后主机（大陆为 cn.bing.com），API 请求沿用同一主机。
+  const host = new URL(res.url).hostname;
+  const IG = html.match(/IG:"([^"]+)"/)?.[1];
+  const IID = html.match(/data-iid="([^"]+)"/)?.[1];
+  const m = html.match(/params_AbusePreventionHelper\s*=\s*(\[[^\]]+\])/);
+  if (!IG || !IID || !m) throw new Error('必应翻译参数解析失败');
+
+  // [key(时间戳), token, tokenExpiryInterval(毫秒)]
+  const [key, token, tokenExpiryInterval] = JSON.parse(m[1]);
+  return { host, IG, IID, key, token, tokenExpiryInterval };
+}
+
+// 返回配置；缺失或过期时重新抓取。并发的多次调用共享同一次抓取。
+function ensureBingConfig() {
+  const expired =
+    !bingConfig ||
+    Date.now() - bingConfig.key > bingConfig.tokenExpiryInterval;
+  if (!expired) return Promise.resolve(bingConfig);
+  if (!bingConfigPromise) {
+    bingConfigPromise = fetchBingConfig()
+      .then((c) => {
+        bingConfig = c;
+        bingConfigPromise = null;
+        return c;
+      })
+      .catch((e) => {
+        bingConfigPromise = null;
+        throw e;
+      });
+  }
+  return bingConfigPromise;
+}
+
+async function bingTranslate(text) {
+  const { host, IG, IID, key, token } = await ensureBingConfig();
+  const url = `https://${host}/ttranslatev3?isVertical=1&IG=${IG}&IID=${IID}`;
+  const body = new URLSearchParams({
+    fromLang: 'en',
+    to: 'zh-Hans',
+    text,
+    token,
+    key: String(key),
+    tryFetchingGenderDebiasedTranslations: 'true',
+  });
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+    body,
+  });
+  if (!res.ok) return null;
+  const ct = (res.headers.get('content-type') || '').toLowerCase();
+  if (!ct.includes('json')) return null; // 性别去偏等特殊响应（HTML），忽略
+  const json = await res.json();
+  const trans = json?.[0]?.translations?.[0]?.text;
+  return typeof trans === 'string' && trans ? trans : null;
+}
+
+// 按设置选择翻译引擎，默认谷歌。
+async function translateSentence(text) {
+  const { translator } = await chrome.storage.local.get({ translator: 'google' });
+  return translator === 'bing' ? bingTranslate(text) : googleTranslate(text);
 }
 
 // 点击工具栏图标打开 popup.html（见 manifest 的 action.default_popup），

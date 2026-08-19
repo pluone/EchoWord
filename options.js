@@ -20,6 +20,7 @@ const hoverDelayRadios = document.querySelectorAll('input[name="hoverDelay"]');
 const autoSpeakInput = document.getElementById('autoSpeak');
 const sentenceSpeakInput = document.getElementById('sentenceSpeak');
 const stickyPopupInput = document.getElementById('stickyPopup');
+const translatorRadios = document.querySelectorAll('input[name="translator"]');
 
 const DEFAULTS = {
   voiceName: '',
@@ -29,6 +30,7 @@ const DEFAULTS = {
   autoSpeak: false,
   sentenceSpeak: false,
   stickyPopup: false,
+  translator: 'google', // 'google' | 'bing'
 };
 // 试听用的样例英文（经典全字母句，便于听清各个音）。
 const SAMPLE_TEXT = 'The quick brown fox jumps over the lazy dog.';
@@ -194,6 +196,9 @@ async function loadHoverOptions() {
   autoSpeakInput.checked = !!cfg.autoSpeak;
   sentenceSpeakInput.checked = !!cfg.sentenceSpeak;
   stickyPopupInput.checked = !!cfg.stickyPopup;
+  for (const radio of translatorRadios) {
+    radio.checked = radio.value === cfg.translator;
+  }
 }
 
 excludeButton.addEventListener('click', () => {
@@ -258,6 +263,14 @@ sentenceSpeakInput.addEventListener('change', () => {
 stickyPopupInput.addEventListener('change', () => {
   chrome.storage.local.set({ stickyPopup: stickyPopupInput.checked });
 });
+
+for (const radio of translatorRadios) {
+  radio.addEventListener('change', () => {
+    if (radio.checked) {
+      chrome.storage.local.set({ translator: radio.value });
+    }
+  });
+}
 
 async function init() {
   renderTicks(
