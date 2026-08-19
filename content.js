@@ -12,6 +12,7 @@ const DEFAULT_OPTIONS = {
   autoSpeak: false,
   sentenceSpeak: false,
   stickyPopup: false,
+  phonetics: 'us', // 弹窗中展示的音标：'us' 美式（默认）| 'uk' 英式
 };
 
 // 英文单词字符：字母、数字、撇号、连字符。
@@ -28,6 +29,7 @@ let activeSentence = null; // 当前弹窗对应的句子，用于丢弃过期�
 let showTimer = null;
 let hideTimer = null;
 let visible = false;
+let widthLocked = false; // 本次弹窗的宽度是否已确定（确定后冻结，内容加载不再改变宽度）
 let enabled = false; // 当前站点是否启用，随站点开关实时更新
 const HOSTNAME = (location.hostname || '').toLowerCase();
 
@@ -67,6 +69,9 @@ shadow.innerHTML = `
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 14px;
     line-height: 1.35;
+    /* 宽度先按内容自适应（fit-content），首次内容加载后由 JS 冻结为固定像素；
+       此后释义/翻译继续加载只在纵向扩展，不再改变宽度。 */
+    width: fit-content;
     max-width: min(60vw, 420px);
     box-sizing: border-box;
   }
@@ -99,12 +104,16 @@ shadow.innerHTML = `
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 40vw;
+    flex: 1 1 auto;
+    min-width: 0; /* 允许在固定宽度内收缩省略，而不是撑宽弹窗 */
   }
   .phons {
     color: #666;
     font-size: 13px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
     margin-left: auto; /* 音标靠右 */
   }
   .btn {
@@ -457,6 +466,17 @@ function renderPopup(word) {
   transEl.textContent = '';
   transEl.hidden = true;
   bodyEl.hidden = true;
+  // 每次展示重新按内容确定宽度：解除冻结，恢复 fit-content。
+  widthLocked = false;
+  popupEl.style.width = '';
+}
+
+// 把当前弹窗宽度固化为像素值。宽度在首次内容（音标/释义或译文）加载后确定，
+// 之后保持冻结，后续内容只在纵向扩展，避免弹窗来回变宽、位置跳动。
+function lockPopupWidth() {
+  if (widthLocked) return;
+  widthLocked = true;
+  popupEl.style.width = popupEl.offsetWidth + 'px';
 }
 
 // ---------- 词典释义 ----------
@@ -494,11 +514,10 @@ function loadDict(word) {
 function renderDict(data) {
   if (!data) return; // 查无结果：保持仅显示单词
 
-  // 音标：英在前、美在后，与必应页面一致。
-  const phons = [];
-  if (data.uk) phons.push(`英[${data.uk}]`);
-  if (data.us) phons.push(`美[${data.us}]`);
-  phonsEl.textContent = phons.join(' ');
+  // 音标：只展示设置里选中的一种（默认美式）。
+  const acc = cfg.phonetics === 'uk' ? '英' : '美';
+  const phon = cfg.phonetics === 'uk' ? data.uk : data.us;
+  if (phon) phonsEl.textContent = `${acc}[${phon}]`;
 
   // 释义：每条一行「词性 + 释义」。
   defsEl.textContent = '';
@@ -516,6 +535,7 @@ function renderDict(data) {
   }
 
   updateBodyVisibility();
+  lockPopupWidth();
 }
 
 // ---------- 整句翻译 ----------
@@ -553,6 +573,7 @@ function renderTranslation(trans) {
   transEl.textContent = trans;
   transEl.hidden = false;
   updateBodyVisibility();
+  lockPopupWidth();
 }
 
 // phons / defs / trans 任一有内容即显示 .body，内容变化后重新定位弹窗。
