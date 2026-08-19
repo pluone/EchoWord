@@ -25,6 +25,7 @@ const POINT_TOLERANCE = 6; // px
 let cfg = { ...DEFAULT_OPTIONS };
 let currentWord = null; // { word, node, start, end, x, y }
 let lastReadSentence = null; // 最近一次自动朗读所属的句子，用于同句内移动时避免重复朗读
+let activeSentence = null; // 当前弹窗对应的句子，用于丢弃过期的整句翻译
 let showTimer = null;
 let hideTimer = null;
 let visible = false;
@@ -143,6 +144,12 @@ shadow.innerHTML = `
     font-weight: 600;
     margin-right: 4px;
   }
+  .trans {
+    font-size: 14px;
+    line-height: 1.4;
+    color: #1a1a1a;
+  }
+  .trans[hidden] { display: none; }
 </style>
 <div class="popup">
   <div class="head">
@@ -153,6 +160,7 @@ shadow.innerHTML = `
   </div>
   <div class="body" hidden>
     <div class="defs"></div>
+    <div class="trans" hidden></div>
   </div>
 </div>
 `;
@@ -161,6 +169,7 @@ const wordEl = shadow.querySelector('.word');
 const phonsEl = shadow.querySelector('.phons');
 const bodyEl = shadow.querySelector('.body');
 const defsEl = shadow.querySelector('.defs');
+const transEl = shadow.querySelector('.trans');
 const speakBtn = shadow.querySelector('.speak');
 const closeBtn = shadow.querySelector('.close');
 const popupEl = shadow.querySelector('.popup');
@@ -442,6 +451,8 @@ function renderPopup(word) {
   wordEl.textContent = word;
   phonsEl.textContent = '';
   defsEl.textContent = '';
+  transEl.textContent = '';
+  transEl.hidden = true;
   bodyEl.hidden = true;
 }
 
@@ -501,10 +512,51 @@ function renderDict(data) {
     defsEl.appendChild(line);
   }
 
-  const hasBody = phonsEl.textContent || defsEl.childNodes.length;
-  bodyEl.hidden = !hasBody;
+  updateBodyVisibility();
+}
 
-  // 内容填充后重新定位，保证卡片整体落在视口内。
+// ---------- 整句翻译 ----------
+//
+// 悬停时向后台请求谷歌翻译，把单词所在整句译成中文，显示在释义下方。
+// 结果按句子缓存在本地，避免反复悬停同一句子时重复请求。
+// 仅缓存成功的译文：null 多为接口瞬时报错，缓存会掩盖可恢复的失败。
+
+const translateCache = new Map(); // 句子 -> 译文（只缓存成功结果）
+
+function lookupTranslation(sentence) {
+  if (translateCache.has(sentence)) return Promise.resolve(translateCache.get(sentence));
+  return chrome.runtime
+    .sendMessage({ type: 'translate', text: sentence })
+    .then((res) => {
+      console.log('lookupTranslation', JSON.stringify(res));
+      const data = res && res.ok ? res.data : null;
+      if (data) translateCache.set(sentence, data);
+      return data;
+    })
+    .catch(() => null);
+}
+
+function loadTranslation(sentence) {
+  lookupTranslation(sentence).then((trans) => {
+    // 弹窗可能已隐藏或已切到别的句子，丢弃过期结果。
+    if (!visible || activeSentence !== sentence) return;
+    console.log('loadTranslation', sentence, JSON.stringify(trans));
+    renderTranslation(trans);
+  });
+}
+
+function renderTranslation(trans) {
+  if (!trans) return; // 翻译失败或为空：保持仅显示释义
+  transEl.textContent = trans;
+  transEl.hidden = false;
+  updateBodyVisibility();
+}
+
+// phons / defs / trans 任一有内容即显示 .body，内容变化后重新定位弹窗。
+// 词典与翻译异步返回的顺序不定，统一由此处判断显隐，避免互相覆盖。
+function updateBodyVisibility() {
+  const hasBody = phonsEl.textContent || defsEl.childNodes.length || !transEl.hidden;
+  bodyEl.hidden = !hasBody;
   positionPopup(currentWord);
 }
 
@@ -552,6 +604,10 @@ function showPopup(info) {
   renderPopup(info.word);
   positionPopup(info);
   visible = true;
+  // 所在整句：整句翻译与整句朗读共用，只提取一次。
+  const sentence = sentenceFromWord(info);
+  activeSentence = sentence;
+  loadTranslation(sentence);
   loadDict(info.word);
   if (!cfg.autoSpeak) return;
   if (!cfg.sentenceSpeak) {
@@ -560,7 +616,6 @@ function showPopup(info) {
     return;
   }
   // 整句朗读：同句内移动不重复朗读，仅切换到不同句子时才朗读。
-  const sentence = sentenceFromWord(info);
   if (sentence !== lastReadSentence) {
     speakFor(info, sentence);
     lastReadSentence = sentence;
@@ -573,6 +628,7 @@ function hidePopup() {
   setHost('display', 'none');
   currentWord = null;
   lastReadSentence = null;
+  activeSentence = null;
   clearShow();
   clearHide();
 }

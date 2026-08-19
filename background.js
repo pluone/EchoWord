@@ -203,6 +203,25 @@ async function lookupWord(word) {
   return data;
 }
 
+// ---------- 整句翻译（谷歌翻译） ----------
+//
+// 悬停卡片里的句子中文译文来自谷歌翻译免费接口（见 docs/api.md）。
+// 接口 en→zh，整句传入时返回 sentences[].trans，拼接后即译文。
+
+const TRANSLATE_URL =
+  'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh&hl=en-US&dt=t&dt=bd&dt=md&dt=ss&dt=ex&dj=1&source=bubble&q={q}';
+
+async function translateSentence(text) {
+  const url = TRANSLATE_URL.replace('{q}', encodeURIComponent(text));
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const json = await res.json();
+  const trans = (json?.sentences || [])
+    .map((s) => (s && typeof s.trans === 'string' ? s.trans : ''))
+    .join('');
+  return trans || null;
+}
+
 // 点击工具栏图标打开 popup.html（见 manifest 的 action.default_popup），
 // 完整设置由弹窗内的「打开完整设置」入口进入。
 
@@ -239,6 +258,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     lookupWord(word)
       .then((data) => sendResponse({ ok: true, data }))
       .catch(() => sendResponse({ ok: false }));
+    return true; // 异步响应，保持消息通道
+  }
+
+  if (message?.type === 'translate') {
+    const text = typeof message.text === 'string' ? message.text.trim() : '';
+    if (!text) {
+      sendResponse({ ok: false });
+      return;
+    }
+    translateSentence(text)
+      .then((data) => sendResponse({ ok: true, data }))
+      .catch((e) => sendResponse({ ok: false }));
     return true; // 异步响应，保持消息通道
   }
 });
