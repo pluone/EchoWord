@@ -23,7 +23,7 @@ const HAS_ALNUM = /[A-Za-z0-9]/;
 const POINT_TOLERANCE = 6; // px
 
 let cfg = { ...DEFAULT_OPTIONS };
-let currentWord = null; // { word, node, start, end, x, y }
+let currentWord = null; // { word, node, start, end }
 let lastReadSentence = null; // 最近一次自动朗读所属的句子，用于同句内移动时避免重复朗读
 let activeSentence = null; // 当前弹窗对应的句子，用于丢弃过期的整句翻译
 let showTimer = null;
@@ -38,7 +38,7 @@ const host = document.createElement('div');
 host.setAttribute('data-echo-word', '');
 // 内联样式统一加 !important，尽量抵抗页面样式对宿主的干扰。
 const setHost = (prop, value) => host.style.setProperty(prop, value, 'important');
-setHost('position', 'fixed');
+setHost('position', 'absolute');
 setHost('z-index', '2147483647');
 setHost('left', '0px');
 setHost('top', '0px');
@@ -228,7 +228,7 @@ function wordAtPoint(x, y) {
     return null;
   }
 
-  return { word, node: pos.node, start, end, rect };
+  return { word, node: pos.node, start, end };
 }
 
 // 文本范围 [start, end) 的包围盒；无法测量时返回 null。
@@ -560,12 +560,9 @@ function updateBodyVisibility() {
   positionPopup(currentWord);
 }
 
-// 取单词的包围盒，用于把弹窗定位到单词正上方并水平居中。
-// wordAtPoint 已算过 rect，直接复用，避免重复测量。
-function wordRect(info) {
-  return info.rect || rangeRect(info.node, info.start, info.end);
-}
-
+// 把弹窗按页面坐标钉在单词上方。弹窗用 absolute 定位随页面一起滚动，
+// 由浏览器合成器与单词同步移动：滚动时无需逐帧重新测量，也不会 JS 重定位抖动，
+// 滚到视口边界时会被视口自然裁切、逐渐隐藏。
 function positionPopup(info) {
   setHost('display', 'block');
   setHost('left', '0px');
@@ -577,22 +574,26 @@ function positionPopup(info) {
   const pad = 8;
   const gap = 6; // 尖角与单词之间的间距
 
-  const wr =
-    wordRect(info) ||
-    { left: info.x, top: info.y, width: 0, height: 0, right: info.x, bottom: info.y };
-  const cx = wr.left + wr.width / 2; // 单词水平中心
-
-  let left = cx - w / 2;
-  left = Math.max(pad, Math.min(left, window.innerWidth - w - pad));
-
-  // 优先放在单词正上方；上方空间不足时翻转到单词下方。
-  let above = true;
-  let top = wr.top - h - gap;
-  if (top < pad) {
-    above = false;
-    top = wr.bottom + gap;
+  const wr = rangeRect(info.node, info.start, info.end);
+  if (!wr) {
+    // 单词已无法测量（如节点被移除），不显示弹窗。
+    setHost('display', 'none');
+    return;
   }
-  top = Math.max(pad, Math.min(top, window.innerHeight - h - pad));
+
+  // 页面坐标 = 视口坐标 + 滚动偏移。
+  const scrollX = window.scrollX || window.pageXOffset || 0;
+  const scrollY = window.scrollY || window.pageYOffset || 0;
+
+  const cx = wr.left + scrollX + wr.width / 2; // 单词水平中心（页面坐标）
+  let left = cx - w / 2;
+  left = Math.max(pad + scrollX, Math.min(left, scrollX + window.innerWidth - w - pad));
+
+  // 优先放在单词正上方；上方视口空间不足时翻转到单词下方。
+  const above = wr.top - h - gap >= pad;
+  const top = above
+    ? wr.top + scrollY - h - gap
+    : wr.top + scrollY + wr.height + gap;
 
   popupEl.classList.toggle('below', !above);
 
@@ -691,23 +692,21 @@ function handleMove(x, y) {
     currentWord.end === info.end;
 
   if (sameWord) {
-    // 仍停留在同一个单词上，仅更新坐标，等待原定时器触发。
-    currentWord.x = x;
-    currentWord.y = y;
+    // 仍停留在同一个单词上，等待原定时器触发。
     return;
   }
 
-  currentWord = { ...info, x, y };
+  currentWord = { ...info };
   clearHide();
 
   if (visible && cfg.stickyPopup) {
     // 粘性模式：弹窗已显示，切换到新单词同样按「悬停弹出延迟」延时展示；
     // 是否朗读由 showPopup 依据是否切到不同句子决定。
-    scheduleShow({ ...info, x, y });
+    scheduleShow({ ...info });
     return;
   }
 
-  scheduleShow({ ...info, x, y });
+  scheduleShow({ ...info });
 }
 
 document.addEventListener(
