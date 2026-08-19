@@ -86,6 +86,75 @@
     </section>
 
     <section class="field">
+      <label>弹窗触发方式（Pop-up mode）</label>
+      <div class="radio-group" id="popupModeMac">
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="hover_click" />
+          <span>悬停或点击单词/短语即可打开弹窗（默认）</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="hover" />
+          <span>仅悬停单词/短语时打开弹窗</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="click" />
+          <span>仅点击或轻触单词/短语时打开弹窗</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="alt_click" />
+          <span>仅按住 Option 键点击单词/短语时打开弹窗</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="command_click" />
+          <span>仅按住 Command 键点击单词/短语时打开弹窗</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="hover_command" />
+          <span>仅悬停单词/短语后按下 Command 键时打开弹窗</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="hover_control" />
+          <span>仅悬停单词/短语后按下 Control 键时打开弹窗</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="disable" />
+          <span>禁用弹窗</span>
+        </label>
+      </div>
+      <div class="radio-group" id="popupModeWindows" hidden>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="hover_click" />
+          <span>悬停或点击单词/短语即可打开弹窗（默认）</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="hover" />
+          <span>仅悬停单词/短语时打开弹窗</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="click" />
+          <span>仅点击或轻触单词/短语时打开弹窗</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="alt_click" />
+          <span>仅按住 Alt 键点击单词/短语时打开弹窗</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="control_click" />
+          <span>仅按住 Ctrl 键点击单词/短语时打开弹窗</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="hover_control" />
+          <span>仅悬停单词/短语后按下 Ctrl 键时打开弹窗</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="popupMode" value="disable" />
+          <span>禁用弹窗</span>
+        </label>
+      </div>
+      <p class="hint">选择弹窗的打开方式，选项随系统类型显示。</p>
+    </section>
+
+    <section class="field">
       <label>整句翻译引擎</label>
       <div class="radio-group">
         <label class="radio-row">

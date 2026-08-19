@@ -22,6 +22,8 @@ const sentenceSpeakInput = document.getElementById('sentenceSpeak');
 const stickyPopupInput = document.getElementById('stickyPopup');
 const translatorRadios = document.querySelectorAll('input[name="translator"]');
 const phoneticsRadios = document.querySelectorAll('input[name="phonetics"]');
+const popupModeMac = document.getElementById('popupModeMac');
+const popupModeWindows = document.getElementById('popupModeWindows');
 
 const DEFAULTS = {
   voiceName: '',
@@ -33,7 +35,18 @@ const DEFAULTS = {
   stickyPopup: false,
   translator: 'google', // 'google' | 'bing'
   phonetics: 'us', // 'us' 美式 | 'uk' 英式
+  popupMode: 'hover_click', // 弹窗触发方式，见 options.html 的 Pop-up mode 分组
 };
+
+// 操作系统类型：macOS 与 Windows 可选的弹窗触发方式不同（见 popupModeMac / popupModeWindows）。
+const OS = (() => {
+  const p =
+    (navigator.userAgentData && navigator.userAgentData.platform) ||
+    navigator.platform ||
+    '';
+  return /mac/i.test(p) ? 'mac' : /win/i.test(p) ? 'windows' : 'other';
+})();
+
 // 试听用的样例英文（经典全字母句，便于听清各个音）。
 const SAMPLE_TEXT = 'The quick brown fox jumps over the lazy dog.';
 
@@ -204,6 +217,19 @@ async function loadHoverOptions() {
   for (const radio of phoneticsRadios) {
     radio.checked = radio.value === cfg.phonetics;
   }
+  // 弹窗触发方式：只展示当前系统可用的选项，存储了本系统不存在的值则回退到默认。
+  const isMac = OS === 'mac';
+  popupModeMac.hidden = !isMac;
+  popupModeWindows.hidden = isMac;
+  const modeRadios = (isMac ? popupModeMac : popupModeWindows).querySelectorAll(
+    'input[name="popupMode"]'
+  );
+  const valid = new Set(Array.from(modeRadios, (r) => r.value));
+  const mode = valid.has(cfg.popupMode) ? cfg.popupMode : DEFAULTS.popupMode;
+  if (mode !== cfg.popupMode) chrome.storage.local.set({ popupMode: mode });
+  for (const radio of modeRadios) {
+    radio.checked = radio.value === mode;
+  }
 }
 
 excludeButton.addEventListener('click', () => {
@@ -281,6 +307,15 @@ for (const radio of phoneticsRadios) {
   radio.addEventListener('change', () => {
     if (radio.checked) {
       chrome.storage.local.set({ phonetics: radio.value });
+    }
+  });
+}
+
+// 两个系统分组共用 name="popupMode"，任一被选中即保存。
+for (const radio of document.querySelectorAll('input[name="popupMode"]')) {
+  radio.addEventListener('change', () => {
+    if (radio.checked) {
+      chrome.storage.local.set({ popupMode: radio.value });
     }
   });
 }

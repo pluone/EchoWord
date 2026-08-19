@@ -1,7 +1,8 @@
 // echo word — 悬停单词即弹出小卡片并朗读（已移除原来的「选中即朗读」）。
 //
 // 行为：
-// - 鼠标悬停在英文单词上超过「悬停延迟」后弹出卡片（Shadow DOM），显示该单词与喇叭图标。
+// - 按「弹窗触发方式」（popupMode）决定如何弹出卡片（Shadow DOM）：
+//   hover 悬停、click 点击（可带修饰键）、hover + 修饰键按下、或禁用。
 // - 点击喇叭图标（或开启「自动播放」后弹窗出现时）通过 chrome.tts 朗读。
 // - 开启「整句朗读」时，朗读该单词所在的整句而非单个单词。
 // - 开启「粘性弹窗」时，弹窗只在点击外部、点击 X 或按 Esc 后关闭；
@@ -13,7 +14,35 @@ const DEFAULT_OPTIONS = {
   sentenceSpeak: false,
   stickyPopup: false,
   phonetics: 'us', // 弹窗中展示的音标：'us' 美式（默认）| 'uk' 英式
+  popupMode: 'hover_click', // 弹窗触发方式，见 popupModeConfig
 };
+
+// 弹窗触发模式 → 触发行为：
+// - hover: 悬停显示；click: 点击显示（可带修饰键：alt / meta(command) / ctrl）；
+// - key: 悬停单词后按下修饰键显示；
+// - 返回 null 表示禁用（不响应任何触发）。
+function popupModeConfig(mode) {
+  switch (mode) {
+    case 'hover':
+      return { hover: true };
+    case 'hover_click':
+      return { hover: true, click: true };
+    case 'click':
+      return { click: true };
+    case 'alt_click':
+      return { click: true, alt: true };
+    case 'command_click':
+      return { click: true, meta: true };
+    case 'control_click':
+      return { click: true, ctrl: true };
+    case 'hover_command':
+      return { key: 'meta' };
+    case 'hover_control':
+      return { key: 'ctrl' };
+    default:
+      return null; // 'disable' 及未知值：不显示弹窗
+  }
+}
 
 // 英文单词字符：字母、数字、撇号、连字符。
 const WORD_CHAR = /[A-Za-z0-9'’\-]/;
@@ -695,8 +724,39 @@ function scheduleHide() {
 
 // ---------- 事件 ----------
 
-function handleMove(x, y) {
+function handleMove(event, x, y) {
   const info = wordAtPoint(x, y);
+  const mode = popupModeConfig(cfg.popupMode);
+  if (!mode) return;
+
+  // hover_command / hover_control：悬停只负责记住单词，按下修饰键时由 keydown 显示。
+  if (mode.key) {
+    if (!info) {
+      if (!visible) currentWord = null;
+      scheduleHide();
+      return;
+    }
+    currentWord = { ...info };
+    clearHide();
+    return;
+  }
+
+  // 点击类模式：悬停不触发显示，弹窗锚定在点击的单词上，鼠标移开该单词即隐藏。
+  if (!mode.hover) {
+    if (!info) {
+      if (!visible) currentWord = null;
+      scheduleHide();
+      return;
+    }
+    const onClickedWord =
+      currentWord &&
+      currentWord.node === info.node &&
+      currentWord.start === info.start &&
+      currentWord.end === info.end;
+    if (onClickedWord) clearHide();
+    else scheduleHide();
+    return;
+  }
 
   if (!info) {
     // 弹窗尚在显示时（例如光标正移向小喇叭），保留 currentWord 供点击朗读；
@@ -719,14 +779,6 @@ function handleMove(x, y) {
 
   currentWord = { ...info };
   clearHide();
-
-  if (visible && cfg.stickyPopup) {
-    // 粘性模式：弹窗已显示，切换到新单词同样按「悬停弹出延迟」延时展示；
-    // 是否朗读由 showPopup 依据是否切到不同句子决定。
-    scheduleShow({ ...info });
-    return;
-  }
-
   scheduleShow({ ...info });
 }
 
@@ -734,6 +786,8 @@ document.addEventListener(
   'mousemove',
   (event) => {
     if (!enabled) return; // 当前站点已禁用，不响应悬停。
+    const mode = popupModeConfig(cfg.popupMode);
+    if (!mode) return; // 弹窗禁用，不响应悬停。
     // 移到弹窗本体上时保持显示，不重新计算。
     if (event.target === host) {
       clearHide();
@@ -744,9 +798,39 @@ document.addEventListener(
       scheduleHide();
       return;
     }
-    handleMove(event.clientX, event.clientY);
+    handleMove(event, event.clientX, event.clientY);
   },
   { capture: true, passive: true }
+);
+
+// 点击触发（含带修饰键的 option/alt、command、control/ctrl 点击）。
+document.addEventListener(
+  'click',
+  (event) => {
+    if (!enabled) return;
+    const mode = popupModeConfig(cfg.popupMode);
+    if (!mode || !mode.click) return;
+    // 点击弹窗本体（喇叭 / 关闭按钮）不触发。
+    const inside = event.composedPath
+      ? event.composedPath().includes(host)
+      : event.target === host;
+    if (inside) return;
+    if (isEditable(event.target)) return;
+
+    // 需要修饰键的模式：未按下对应键则不触发。
+    if (mode.alt && !event.altKey) return;
+    if (mode.meta && !event.metaKey) return;
+    if (mode.ctrl && !event.ctrlKey) return;
+
+    const info = wordAtPoint(event.clientX, event.clientY);
+    if (!info) return;
+
+    currentWord = { ...info };
+    clearShow();
+    clearHide();
+    showPopup({ ...info });
+  },
+  { capture: true }
 );
 
 // 点击外部关闭（点击弹窗内部不触发）。
@@ -763,7 +847,8 @@ document.addEventListener(
   true
 );
 
-// Esc 关闭（若尚在延迟等待中，则一并取消弹窗）。
+// Esc 关闭（若尚在延迟等待中，则一并取消弹窗）；
+// hover_command / hover_control：悬停于单词上时按下修饰键打开弹窗。
 document.addEventListener(
   'keydown',
   (event) => {
@@ -771,6 +856,17 @@ document.addEventListener(
     if (event.key === 'Escape') {
       clearShow();
       hidePopup();
+      return;
+    }
+    const mode = popupModeConfig(cfg.popupMode);
+    if (!mode || !mode.key) return;
+    const pressed = mode.key === 'meta' ? event.metaKey : event.ctrlKey;
+    if (!pressed) return;
+    if (currentWord && !visible) {
+      // 按键是故意动作，与点击一样立即弹出，不经过悬停延迟。
+      clearShow();
+      clearHide();
+      showPopup({ ...currentWord });
     }
   },
   true

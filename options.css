@@ -241,6 +241,12 @@ textarea {
   gap: 2px;
 }
 
+/* .radio-group 的 display:flex 会覆盖 hidden 属性默认的 display:none，
+   这里显式声明，保证按系统类型隐藏另一组选项生效。 */
+.radio-group[hidden] {
+  display: none;
+}
+
 .radio-row {
   display: flex;
   align-items: center;
