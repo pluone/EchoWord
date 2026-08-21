@@ -131,18 +131,12 @@ shadow.innerHTML = `
     font-size: 15px;
     font-weight: 600;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     flex: 1 1 auto;
-    min-width: 0; /* 允许在固定宽度内收缩省略，而不是撑宽弹窗 */
   }
   .phons {
     color: #666;
     font-size: 13px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
     margin-left: auto; /* 音标靠右 */
   }
   .btn {
