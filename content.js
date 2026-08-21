@@ -780,6 +780,10 @@ document.addEventListener(
   'mousemove',
   (event) => {
     if (!enabled) return; // 当前站点已禁用，不响应悬停。
+    // 窗口未处于活跃状态（如前方有其他程序窗口）时不响应悬停：
+    // Chrome 会抑制后台窗口的连续 mousemove，只在光标进入窗口那一刻投递一次，
+    // 悬停时长无法可靠计时，仅凭入口事件就会在边界词上误触发。
+    if (!document.hasFocus()) return;
     const mode = popupModeConfig(cfg.popupMode);
     if (!mode) return; // 弹窗禁用，不响应悬停。
     // 移到弹窗本体上时保持显示，不重新计算。
@@ -796,6 +800,28 @@ document.addEventListener(
   },
   { capture: true, passive: true }
 );
+
+// 光标离开浏览器文档（移到前方窗口、其他程序、浏览器 UI 或屏幕外）时，
+// 浏览器不再收到 mousemove：已排定的悬停定时器会继续走完计时，导致
+// 光标早已移开、弹窗却仍弹出（非粘性模式下弹窗也会一直悬着）。
+// 这里在移出文档时取消未触发的定时器并收起弹窗（粘性模式仍保持）。
+function handleDocLeave() {
+  scheduleHide();
+}
+document.documentElement.addEventListener('mouseleave', handleDocLeave);
+document.addEventListener(
+  'mouseout',
+  (event) => {
+    // relatedTarget 为空表示光标离开了文档。
+    if (!event.relatedTarget) handleDocLeave();
+  },
+  { capture: true }
+);
+
+// 浏览器窗口失去活跃（例如其他程序窗口置于前方）时，后台窗口不再可靠收到
+// 鼠标事件，已排定的悬停定时器可能照常触发。失去焦点时立即清理悬停状态，
+// 悬停的触发侧再由上面的 document.hasFocus() 门槛兜底。
+window.addEventListener('blur', scheduleHide);
 
 // 点击触发（含带修饰键的 option/alt、command、control/ctrl 点击）。
 document.addEventListener(
