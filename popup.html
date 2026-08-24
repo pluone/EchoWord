@@ -8,24 +8,53 @@
 <body>
   <header class="popup-header">
     <span class="brand">echo word</span>
-    <span class="site">
-      <span class="site-host" id="site"></span>
-      <span class="badge" id="badge"></span>
-    </span>
   </header>
 
-  <section class="row">
-    <div class="row-text">
-      <div class="row-title">在此网站启用</div>
-      <div class="row-desc">关闭后悬停单词不再朗读</div>
+  <nav class="tab-bar" role="tablist">
+    <button
+      type="button"
+      class="tab-btn"
+      role="tab"
+      data-tab="current"
+      aria-selected="true"
+    >当前站点</button>
+    <button
+      type="button"
+      class="tab-btn"
+      role="tab"
+      data-tab="all"
+      aria-selected="false"
+    >全部网站</button>
+  </nav>
+
+  <!-- Tab 1：当前站点 -->
+  <section class="tab-panel" data-panel="current" role="tabpanel">
+    <div class="row">
+      <div class="row-text">
+        <div class="site-host" id="site"></div>
+        <div class="row-desc" id="siteDesc"></div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="enabled" aria-label="在此网站启用" />
+        <span class="track"><span class="thumb"></span></span>
+      </label>
     </div>
-    <label class="switch">
-      <input type="checkbox" id="enabled" aria-label="在此网站启用" />
-      <span class="track"><span class="thumb"></span></span>
-    </label>
+    <p class="hint" id="hint" hidden></p>
   </section>
 
-  <p class="hint" id="hint" hidden></p>
+  <!-- Tab 2：全部网站（仅全局总开关） -->
+  <section class="tab-panel" data-panel="all" role="tabpanel" hidden>
+    <div class="row">
+      <div class="row-text">
+        <div class="row-title">全部网站</div>
+        <div class="row-desc" id="allDesc"></div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="global" aria-label="全部网站启用" />
+        <span class="track"><span class="thumb"></span></span>
+      </label>
+    </div>
+  </section>
 
   <footer class="popup-footer">
     <button type="button" id="openOptions" class="link-btn">打开完整设置</button>

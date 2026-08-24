@@ -15,6 +15,7 @@ const DEFAULT_OPTIONS = {
   stickyPopup: false,
   phonetics: 'us', // 弹窗中展示的音标：'us' 美式（默认）| 'uk' 英式
   popupMode: 'hover_click', // 弹窗触发方式，见 popupModeConfig
+  siteMode: 'blacklist', // 站点启停模式：'blacklist' 黑名单 | 'whitelist' 白名单
 };
 
 // 弹窗触发模式 → 触发行为：
@@ -900,9 +901,18 @@ function applyConfig(next) {
   cfg = { ...DEFAULT_OPTIONS, ...next };
 }
 
-// 当前站点是否在禁用名单中（siteDisabled 为按 hostname 的禁用列表）。
-function isSiteDisabled(list) {
+// 当前 hostname 是否命中某个 hostname 列表。
+function isSiteIn(list) {
   return (list || []).some((h) => String(h).toLowerCase() === HOSTNAME);
+}
+
+// 结合站点模式重算站点启用信号：
+// - blacklist（默认）：不在禁用列表即启用（全局开启，手动关闭个别站点）；
+// - whitelist：仅在启用列表里才启用（全局关闭，手动开启个别站点）。
+function siteAllowedFor(mode, siteDisabled, siteEnabled) {
+  return mode === 'whitelist'
+    ? isSiteIn(siteEnabled)
+    : !isSiteIn(siteDisabled);
 }
 
 // lang 属性是否声明为英文（en / en-US / en-GB 等）。
@@ -964,12 +974,12 @@ function isEnglishPage() {
   return sampleBodyIsEnglish();
 }
 
-// 站点是否未在禁用名单中（随站点开关实时更新，仅此一个来源）。
+// 站点是否启用（随站点模式与启停列表实时更新，仅此一个来源）。
 let siteAllowed = false;
 // 页面是否判定为英文（加载时判定一次，无需监听 DOM 变化）。
 let pageIsEnglish = false;
 
-// 合并「站点未禁用」与「页面是英文」两个条件，决定最终启用态。
+// 合并「站点启用」与「页面是英文」两个条件，决定最终启用态。
 function updateActive() {
   const on = siteAllowed && pageIsEnglish;
   if (on === enabled) return;
@@ -978,21 +988,31 @@ function updateActive() {
 }
 
 // 站点启停与选项都存在 storage.local，首次加载时一并读取。
-chrome.storage.local.get({ ...DEFAULT_OPTIONS, siteDisabled: [] }, (items) => {
-  applyConfig(items);
-  pageIsEnglish = isEnglishPage();
-  console.log('isEnglishPage', pageIsEnglish);
-  siteAllowed = !isSiteDisabled(items.siteDisabled);
-  updateActive();
-});
+chrome.storage.local.get(
+  { ...DEFAULT_OPTIONS, siteMode: 'blacklist', siteDisabled: [], siteEnabled: [] },
+  (items) => {
+    applyConfig(items);
+    pageIsEnglish = isEnglishPage();
+    console.log('isEnglishPage', pageIsEnglish);
+    siteAllowed = siteAllowedFor(items.siteMode, items.siteDisabled, items.siteEnabled);
+    updateActive();
+  }
+);
+
+// 站点启用信号依赖的三个键之一变化时重算，英文判定不随它们变。
+const SITE_KEYS = ['siteMode', 'siteDisabled', 'siteEnabled'];
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
 
-  // 站点启停变化：仅更新「站点未禁用」信号，英文判定不随它变。
-  if (changes.siteDisabled) {
-    siteAllowed = !isSiteDisabled(changes.siteDisabled.newValue);
-    updateActive();
+  if (SITE_KEYS.some((k) => changes[k])) {
+    chrome.storage.local.get(
+      { siteMode: 'blacklist', siteDisabled: [], siteEnabled: [] },
+      (items) => {
+        siteAllowed = siteAllowedFor(items.siteMode, items.siteDisabled, items.siteEnabled);
+        updateActive();
+      }
+    );
   }
 
   const next = {};
