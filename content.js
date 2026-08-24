@@ -135,8 +135,9 @@ shadow.innerHTML = `
     flex: 1 1 auto;
   }
   .phons {
-    color: #666;
-    font-size: 13px;
+    color: #333;
+    font-size: 14px;
+    font-weight: 600;
     white-space: nowrap;
     margin-left: auto; /* 音标靠右 */
   }
@@ -537,9 +538,8 @@ function renderDict(data) {
   if (!data) return; // 查无结果：保持仅显示单词
 
   // 音标：只展示设置里选中的一种（默认美式）。
-  const acc = cfg.phonetics === 'uk' ? '英' : '美';
   const phon = cfg.phonetics === 'uk' ? data.uk : data.us;
-  if (phon) phonsEl.textContent = `${acc}[${phon}]`;
+  if (phon) phonsEl.textContent = `/${phon}/`;
 
   // 释义：每条一行「词性 + 释义」。
   defsEl.textContent = '';
