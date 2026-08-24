@@ -909,9 +909,73 @@ function isSiteDisabled(list) {
   return (list || []).some((h) => String(h).toLowerCase() === HOSTNAME);
 }
 
-// 启用 / 禁用当前站点。禁用时立即收起弹窗并清空悬停状态。
-function setEnabled(on) {
-  on = !!on;
+// lang 属性是否声明为英文（en / en-US / en-GB 等）。
+function isEnglishLang(langAttr) {
+  const l = (langAttr || '').trim().toLowerCase();
+  return l === 'en' || l.startsWith('en-') || l.startsWith('en_');
+}
+
+// 正文采样判定页面是否英文：lang 属性缺失时才调用。遍历 body 下有限个
+// 可见文本节点，累计英文字母与非空白字符的占比，高于阈值则视为英文页。
+// 采样上限到点即停，避免大页面卡顿；采样为空（页面几乎无文本）时保守视为英文。
+const SAMPLE_MAX_LETTERS = 2000; // 累计采样字母上限，到点即停
+const SAMPLE_MAX_NODES = 800; // 访问节点上限，同上
+const EN_RATIO_THRESHOLD = 0.8; // 英文字母占非空白字符的比例阈值
+
+function sampleBodyIsEnglish() {
+  const body = document.body;
+  if (!body) return true;
+  let letters = 0;
+  let nonspace = 0;
+  let visited = 0;
+
+  const walk = (el) => {
+    if (letters >= SAMPLE_MAX_LETTERS || visited >= SAMPLE_MAX_NODES) return;
+    const children = el.childNodes;
+    for (let i = 0; i < children.length; i++) {
+      if (letters >= SAMPLE_MAX_LETTERS || visited >= SAMPLE_MAX_NODES) return;
+      visited++;
+      const child = children[i];
+      if (child.nodeType === Node.TEXT_NODE) {
+        const text = child.textContent || '';
+        for (let j = 0; j < text.length; j++) {
+          const ch = text[j];
+          if (!/\s/.test(ch)) {
+            nonspace++;
+            if (/[A-Za-z]/.test(ch)) letters++;
+          }
+        }
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        const tag = child.tagName;
+        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT' || tag === 'TEMPLATE') {
+          continue;
+        }
+        const style = getComputedStyle(child);
+        if (style.display === 'none' || style.visibility === 'hidden') continue;
+        walk(child);
+      }
+    }
+  };
+
+  walk(body);
+  return nonspace === 0 || letters / nonspace >= EN_RATIO_THRESHOLD;
+}
+
+// 是否判定为英文网页：优先 lang 属性；缺失时正文采样兜底。
+function isEnglishPage() {
+  const langAttr = (document.documentElement && document.documentElement.lang) || '';
+  if (langAttr.trim()) return isEnglishLang(langAttr);
+  return sampleBodyIsEnglish();
+}
+
+// 站点是否未在禁用名单中（随站点开关实时更新，仅此一个来源）。
+let siteAllowed = false;
+// 页面是否判定为英文（加载时判定一次，无需监听 DOM 变化）。
+let pageIsEnglish = false;
+
+// 合并「站点未禁用」与「页面是英文」两个条件，决定最终启用态。
+function updateActive() {
+  const on = siteAllowed && pageIsEnglish;
   if (on === enabled) return;
   enabled = on;
   if (!on) hidePopup();
@@ -920,15 +984,19 @@ function setEnabled(on) {
 // 站点启停与选项都存在 storage.local，首次加载时一并读取。
 chrome.storage.local.get({ ...DEFAULT_OPTIONS, siteDisabled: [] }, (items) => {
   applyConfig(items);
-  setEnabled(!isSiteDisabled(items.siteDisabled));
+  pageIsEnglish = isEnglishPage();
+  console.log('isEnglishPage', pageIsEnglish);
+  siteAllowed = !isSiteDisabled(items.siteDisabled);
+  updateActive();
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
 
-  // 站点启停变化：实时切换当前页面的启用状态（弹窗里切换后立即生效）。
+  // 站点启停变化：仅更新「站点未禁用」信号，英文判定不随它变。
   if (changes.siteDisabled) {
-    setEnabled(!isSiteDisabled(changes.siteDisabled.newValue));
+    siteAllowed = !isSiteDisabled(changes.siteDisabled.newValue);
+    updateActive();
   }
 
   const next = {};
