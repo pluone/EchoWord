@@ -19,6 +19,8 @@ const previewCustom = document.getElementById('previewCustom');
 const hoverDelayRadios = document.querySelectorAll('input[name="hoverDelay"]');
 const autoSpeakInput = document.getElementById('autoSpeak');
 const sentenceSpeakInput = document.getElementById('sentenceSpeak');
+const wordFirstInput = document.getElementById('wordFirst');
+const wordFirstRow = document.getElementById('wordFirstRow');
 const stickyPopupInput = document.getElementById('stickyPopup');
 const translatorRadios = document.querySelectorAll('input[name="translator"]');
 const phoneticsRadios = document.querySelectorAll('input[name="phonetics"]');
@@ -31,7 +33,7 @@ const DEFAULTS = {
   rate: 1,
   hoverDelay: 600,
   autoSpeak: false,
-  sentenceSpeak: false,
+  speakMode: 'word', // 'word' 单词 | 'sentence' 整句 | 'word_sentence' 先单词后整句
   stickyPopup: false,
   translator: 'google', // 'google' | 'bing'
   phonetics: 'us', // 'us' 美式 | 'uk' 英式
@@ -209,7 +211,13 @@ async function loadHoverOptions() {
     radio.checked = radio.value === String(cfg.hoverDelay);
   }
   autoSpeakInput.checked = !!cfg.autoSpeak;
-  sentenceSpeakInput.checked = !!cfg.sentenceSpeak;
+  // 迁移：旧版布尔 sentenceSpeak → speakMode。
+  if (cfg.sentenceSpeak !== undefined && cfg.speakMode === undefined) {
+    cfg.speakMode = cfg.sentenceSpeak ? 'sentence' : 'word';
+  }
+  sentenceSpeakInput.checked = cfg.speakMode !== 'word';
+  wordFirstInput.checked = cfg.speakMode === 'word_sentence';
+  syncWordFirstRow();
   stickyPopupInput.checked = !!cfg.stickyPopup;
   for (const radio of translatorRadios) {
     radio.checked = radio.value === cfg.translator;
@@ -287,9 +295,30 @@ autoSpeakInput.addEventListener('change', () => {
   chrome.storage.local.set({ autoSpeak: autoSpeakInput.checked });
 });
 
+// 子选项「先朗读单词，再朗读整句」仅在「朗读整句」开启时可选，否则置灰。
+function syncWordFirstRow() {
+  const enabled = sentenceSpeakInput.checked;
+  wordFirstRow.classList.toggle('disabled', !enabled);
+  wordFirstInput.disabled = !enabled;
+}
+
+// 由两个复选框推导并保存内部 speakMode：
+// 不勾「朗读整句」→ word；勾了但没勾子选项 → sentence；两个都勾 → word_sentence。
+function applySpeakCheckboxes() {
+  const mode = !sentenceSpeakInput.checked
+    ? 'word'
+    : wordFirstInput.checked
+      ? 'word_sentence'
+      : 'sentence';
+  chrome.storage.local.set({ speakMode: mode });
+}
+
 sentenceSpeakInput.addEventListener('change', () => {
-  chrome.storage.local.set({ sentenceSpeak: sentenceSpeakInput.checked });
+  syncWordFirstRow();
+  applySpeakCheckboxes();
 });
+
+wordFirstInput.addEventListener('change', applySpeakCheckboxes);
 
 stickyPopupInput.addEventListener('change', () => {
   chrome.storage.local.set({ stickyPopup: stickyPopupInput.checked });

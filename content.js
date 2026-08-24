@@ -4,19 +4,24 @@
 // - 按「弹窗触发方式」（popupMode）决定如何弹出卡片（Shadow DOM）：
 //   hover 悬停、click 点击（可带修饰键）、hover + 修饰键按下、或禁用。
 // - 点击喇叭图标（或开启「自动播放」后弹窗出现时）通过 chrome.tts 朗读。
-// - 开启「整句朗读」时，朗读该单词所在的整句而非单个单词。
+// - 朗读模式（speakMode）：「单词」「整句」或「先单词后整句」。
 // - 开启「粘性弹窗」时，弹窗只在点击外部、点击 X 或按 Esc 后关闭；
 //   否则鼠标移开单词即关闭。
 
 const DEFAULT_OPTIONS = {
   hoverDelay: 600, // 毫秒；0 表示立即
   autoSpeak: false,
-  sentenceSpeak: false,
+  // 朗读模式：'word' 只朗读单词 | 'sentence' 只朗读整句 |
+  // 'word_sentence' 先朗读单词，再朗读整句（见 speakFor）。
+  speakMode: 'word',
   stickyPopup: false,
   phonetics: 'us', // 弹窗中展示的音标：'us' 美式（默认）| 'uk' 英式
   popupMode: 'hover_click', // 弹窗触发方式，见 popupModeConfig
   siteMode: 'blacklist', // 站点启停模式：'blacklist' 黑名单 | 'whitelist' 白名单
 };
+
+// word_sentence 模式下，单词发音结束后到朗读整句之间的固定延迟（毫秒）。
+const WORD_SENTENCE_GAP = 100;
 
 // 弹窗触发模式 → 触发行为：
 // - hover: 悬停显示；click: 点击显示（可带修饰键：alt / meta(command) / ctrl）；
@@ -474,10 +479,38 @@ function sentenceFromWord(info) {
 
 // ---------- 朗读 ----------
 
-function speakFor(info, sentence) {
-  const text = cfg.sentenceSpeak ? sentence || sentenceFromWord(info) : info.word;
-  if (!text) return;
+function speakText(text) {
   chrome.runtime.sendMessage({ type: 'speak', text }).catch(() => { });
+}
+
+// 按朗读模式朗读单词 / 整句：
+// - 'sentence'：只朗读整句；'word'：只朗读单词（默认）；
+// - 'word_sentence'：先朗读单词，单词发音结束后再延迟固定间隔（WORD_SENTENCE_GAP），
+//   然后朗读整句（时序在 background 的 TTS onEvent 中处理）。
+function speakFor(info, sentence) {
+  const mode = cfg.speakMode;
+
+  if (mode === 'sentence') {
+    const text = sentence || sentenceFromWord(info);
+    if (text) speakText(text);
+    return;
+  }
+
+  if (!info.word) return;
+  if (mode !== 'word_sentence') {
+    speakText(info.word);
+    return;
+  }
+
+  const text = sentence || sentenceFromWord(info);
+  chrome.runtime
+    .sendMessage({
+      type: 'speakSequence',
+      text: info.word,
+      sentence: text,
+      gap: WORD_SENTENCE_GAP,
+    })
+    .catch(() => { });
 }
 
 function stopSpeaking() {
@@ -683,12 +716,7 @@ function showPopup(info) {
   loadTranslation(sentence);
   loadDict(info.word);
   if (!cfg.autoSpeak) return;
-  if (!cfg.sentenceSpeak) {
-    // 未开启整句朗读：移到不同单词就直接朗读该单词。
-    speakFor(info);
-    return;
-  }
-  // 整句朗读：每次移动到新单词都朗读所在整句。
+  // 各朗读模式在 speakFor 内处理（单词 / 整句 / 先单词后整句）。
   speakFor(info, sentence);
 }
 
@@ -926,7 +954,12 @@ closeBtn.addEventListener('click', hidePopup);
 // ---------- 配置 ----------
 
 function applyConfig(next) {
-  cfg = { ...DEFAULT_OPTIONS, ...next };
+  const merged = { ...DEFAULT_OPTIONS, ...next };
+  // 迁移：旧版用布尔 sentenceSpeak 表示「朗读整句」，映射为新的 speakMode。
+  if (next.sentenceSpeak !== undefined && next.speakMode === undefined) {
+    merged.speakMode = next.sentenceSpeak ? 'sentence' : 'word';
+  }
+  cfg = merged;
 }
 
 // 当前 hostname 是否命中某个 hostname 列表。

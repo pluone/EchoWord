@@ -78,6 +78,45 @@ function speakText(text, voiceNameOverride) {
   });
 }
 
+// word_sentence 模式的待触发整句朗读定时器：停止朗读或发起新的朗读时取消，
+// 避免上个单词的整句在延迟后仍串场。
+let sequenceTimer = null;
+
+function cancelSequence() {
+  if (sequenceTimer) {
+    clearTimeout(sequenceTimer);
+    sequenceTimer = null;
+  }
+}
+
+// 先朗读单词，等单词 onEvent 报告 end（发音结束）后再延迟 gap 毫秒朗读整句。
+// 单词被中断 / 出错 / 取消时不再读整句。
+function speakWordThenSentence(word, sentence, gap) {
+  cancelSequence();
+  if (!word) return;
+  chrome.storage.local.get(DEFAULT_OPTIONS, (cfg) => {
+    const base = {
+      lang: DEFAULT_LANG,
+      enqueue: false,
+      volume: Math.min(Math.max(cfg.volume, 0), 100) / 100,
+      rate: cfg.rate,
+    };
+    if (cfg.voiceName) base.voiceName = cfg.voiceName;
+    chrome.tts.speak(word, {
+      ...base,
+      onEvent: (event) => {
+        if (event.type === 'error') return;
+        if (event.type !== 'end') return; // interrupted/cancelled 等：不再读整句
+        if (!sentence) return;
+        sequenceTimer = setTimeout(() => {
+          sequenceTimer = null;
+          chrome.tts.speak(sentence, { ...base });
+        }, gap);
+      },
+    });
+  });
+}
+
 // 调试：打印可用英文语音，并推断默认英文语音。
 function debugVoices() {
   getEnglishVoices().then((enVoices) => {
@@ -317,6 +356,8 @@ async function translateSentence(text) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'speak') {
+    // 新的单次朗读会取消上一个未触发的整句（见 speakWordThenSentence）。
+    cancelSequence();
     const text = typeof message.text === 'string' ? message.text.trim() : '';
     if (!text) return;
     const voiceOverride =
@@ -328,7 +369,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
 
+  if (message?.type === 'speakSequence') {
+    const word = typeof message.text === 'string' ? message.text.trim() : '';
+    if (!word) {
+      sendResponse({ ok: false });
+      return;
+    }
+    const sentence =
+      typeof message.sentence === 'string' ? message.sentence.trim() : '';
+    const gap = Math.max(0, Number(message.gap) || 0);
+    speakWordThenSentence(word, sentence, gap);
+    sendResponse({ ok: true });
+    return;
+  }
+
   if (message?.type === 'stop') {
+    cancelSequence();
     chrome.tts.stop();
     sendResponse({ ok: true });
     return;
