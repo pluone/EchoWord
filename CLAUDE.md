@@ -26,6 +26,7 @@ echo word —— Chrome 扩展（Manifest V3）：悬停/点击英文单词弹�
 - **悬停状态机规则**：光标落在同一单词（node+start+end 相同）不重置定时器；落到空白 `scheduleHide` 取消定时器；**窗口不活跃时（`!document.hasFocus()`）不响应悬停**——macOS Chrome 抑制后台窗口连续 `mousemove`，只投递一次入口事件，这正是边界词误触发的根因；光标离开文档 / 窗口失焦时清理悬停状态。改这块逻辑务必看 `docs/technical/bugfix-hover-trigger-at-window-boundary.md`。
 - **弹窗样式**：Shadow DOM + 内联 `!important` 抗页面样式；宽度首次内容加载后冻结为像素（`lockPopupWidth`）。
 - **词典缓存**：background 内存 + storage.local（`DICT_CACHE_MAX=300` LRU）；content 也有一份内存缓存。翻译缓存只存成功结果。
+- **英文页判定**：content 双重闸门才启用——站点未禁用且页面判定为英文（`enabled = siteAllowed && pageIsEnglish`）。英文判定先看 `<html lang>`，缺失时抽样正文看英文字母占比（`sampleBodyIsEnglish`）。非英文页整个不响应事件。
 - **必应翻译**：需要先抓 `bing.com/translator` 解析 IG/IID/token（有有效期），子域跟随重定向（大陆 `cn.bing.com`），并发共享同一次抓取。
 
 ## 文档
