@@ -141,6 +141,7 @@ shadow.innerHTML = `
     white-space: nowrap;
     margin-left: auto; /* 音标靠右 */
   }
+  .phons .vowel { color: #c0392b; } /* 元音红色 */
   .btn {
     display: inline-flex;
     align-items: center;
@@ -537,9 +538,12 @@ function loadDict(word) {
 function renderDict(data) {
   if (!data) return; // 查无结果：保持仅显示单词
 
-  // 音标：只展示设置里选中的一种（默认美式）。
+  // 音标：只展示设置里选中的一种（默认美式），渲染为 /音标/，元音标红。
   const phon = cfg.phonetics === 'uk' ? data.uk : data.us;
-  if (phon) phonsEl.textContent = `/${phon}/`;
+  if (phon) {
+    phonsEl.textContent = '';
+    phonsEl.append(renderPhoneme(phon));
+  }
 
   // 释义：每条一行「词性 + 释义」。
   defsEl.textContent = '';
@@ -558,6 +562,29 @@ function renderDict(data) {
 
   updateBodyVisibility();
   lockPopupWidth();
+}
+
+// 把音标渲染为「/音标/」：元音用红色 span，辅音及重音符号保持默认颜色。
+function renderPhoneme(phon) {
+  // IPA 元音集合（美/英式音标常见的元音符号）。
+  const VOWELS = new Set(
+    "iɪeɛæaɑɒʌɔoʊuəɚɝɜɞɐɶøœyɨʉ".split('')
+  );
+
+  const frag = document.createDocumentFragment();
+  frag.append('/');
+  for (const ch of phon) {
+    if (VOWELS.has(ch)) {
+      const span = document.createElement('span');
+      span.className = 'vowel';
+      span.textContent = ch;
+      frag.appendChild(span);
+    } else {
+      frag.append(ch);
+    }
+  }
+  frag.append('/');
+  return frag;
 }
 
 // ---------- 整句翻译 ----------
