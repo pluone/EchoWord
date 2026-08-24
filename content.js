@@ -179,7 +179,8 @@ shadow.innerHTML = `
     margin-right: 4px;
   }
   .trans {
-    font-size: 14px;
+    font-size: 13px;
+    font-style: italic;
     line-height: 1.4;
     color: #1a1a1a;
   }
