@@ -514,7 +514,6 @@ function lookupDict(word) {
   return chrome.runtime
     .sendMessage({ type: 'lookup', word })
     .then((res) => {
-      console.log('lookupDict', word, JSON.stringify(res));
       const data = res && res.ok ? res.data : null;
       dictCache.set(word, data);
       return data;
@@ -529,7 +528,6 @@ function loadDict(word) {
   lookupDict(word).then((data) => {
     // 弹窗可能已隐藏或已切到别的单词，丢弃过期结果。
     if (!visible || !currentWord || currentWord.word !== word) return;
-    console.log('loadDict', word, JSON.stringify(data));
     renderDict(data);
   });
 }
@@ -574,7 +572,6 @@ function lookupTranslation(sentence) {
   return chrome.runtime
     .sendMessage({ type: 'translate', text: sentence })
     .then((res) => {
-      console.log('lookupTranslation', JSON.stringify(res));
       const data = res && res.ok ? res.data : null;
       if (data) translateCache.set(sentence, data);
       return data;
@@ -586,7 +583,6 @@ function loadTranslation(sentence) {
   lookupTranslation(sentence).then((trans) => {
     // 弹窗可能已隐藏或已切到别的句子，丢弃过期结果。
     if (!visible || activeSentence !== sentence) return;
-    console.log('loadTranslation', sentence, JSON.stringify(trans));
     renderTranslation(trans);
   });
 }
