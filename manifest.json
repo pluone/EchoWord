@@ -1,9 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "echo word",
+  "name": "EchoWord",
   "version": "0.3.0",
   "description": "悬停英文单词即弹出卡片，展示音标、释义与例句，并通过发音在句子的语感中学会单词。",
-  "permissions": ["tts", "storage", "activeTab", "offscreen"],
+  "permissions": [
+    "tts",
+    "storage",
+    "activeTab",
+    "offscreen"
+  ],
   "host_permissions": [
     "https://*.bing.com/*",
     "https://translate.googleapis.com/*"
@@ -12,7 +17,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "echo word",
+    "default_title": "EchoWord",
     "default_popup": "popup.html"
   },
   "options_ui": {
@@ -21,8 +26,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ]
