@@ -16,7 +16,7 @@ echo word —— Chrome 扩展（Manifest V3）：悬停/点击英文单词弹�
 
 ## 架构（需跨文件理解的部分）
 
-- **content.js** — 核心。注入 Shadow DOM 弹窗宿主；鼠标事件状态机（`scheduleShow`/`scheduleHide`/`showTimer`/`hideTimer`）；`wordAtPoint` 用 `caretPositionFromPoint` + 几何包围盒（`POINT_TOLERANCE=6px`）识别单词；`sentenceFromWord` 提取整句；通过 `chrome.runtime.sendMessage` 调后台。
+- **content.js** — 核心。注入 Shadow DOM 弹窗宿主；鼠标事件状态机（`scheduleShow`/`scheduleHide`/`showTimer`/`hideTimer`）；`wordAtPoint` 用 `caretPositionFromPoint` + 几何包围盒（`POINT_TOLERANCE=6px`）识别单词；同一文本按两种口径提取：翻译用整句 `sentenceForTranslation`（读到句末标点、不截取），朗读用片段 `sentenceForSpeak`（按 `sentenceBreak` 配置断句：comma 断到逗号 / period 断到句号，始终 30 词截取），底层的 `sentenceFromWord(info, {stopAtComma, capWords})` 参数化实现；通过 `chrome.runtime.sendMessage` 调后台。
 - **background.js** — MV3 service worker。`chrome.tts` 朗读（过滤 macOS 搞笑音/机械音）；必应词典 fetch + 离屏解析 + 双层缓存；整句翻译（谷歌免费接口 / 必应 `ttranslatev3` token 流）；消息路由。
 - **offscreen.js** — 离屏文档。MV3 SW 无 DOMParser，解析必应词典 HTML（选择器参考 Saladict）。
 - **options.\*** / **popup.\*** — 设置页 / 工具栏弹窗。站点启停管理 UI 全在 popup（两个 tab：当前站点 / 全部网站）。「全部网站」是全局总开关，映射到 `siteMode`（开=blacklist，关=whitelist）；「当前站点」做单站开关。黑/白名单概念对用户不可见。
@@ -24,7 +24,7 @@ echo word —— Chrome 扩展（Manifest V3）：悬停/点击英文单词弹�
 ## 关键约定（不显而易见的）
 
 - **消息协议**：content→background 的 `type` 为 `speak` / `speakSequence` / `stop` / `lookup` / `translate` / `getVoices`；background→offscreen 为 `parseDictHtml`。`speakSequence`（先单词后整句）在 background 里通过 TTS `onEvent` 的 `end` 事件确定单词发音结束后再延迟 `gap` 朗读整句。异步响应需在监听器里 `return true` 保活消息通道。
-- **配置存 `chrome.storage.local`**：`voiceName, volume, rate, hoverDelay, autoSpeak, speakMode, stickyPopup, translator, phonetics, popupMode, siteMode, siteDisabled, siteEnabled, excludedVoices, dictCache`。content 脚本用 `chrome.storage.onChanged` 实时应用配置。`speakMode` 由 options 页两个复选框推导（`sentenceSpeak` + `wordFirst` → word / sentence / word_sentence）。
+- **配置存 `chrome.storage.local`**：`voiceName, volume, rate, hoverDelay, autoSpeak, speakMode, sentenceBreak, stickyPopup, translator, phonetics, popupMode, siteMode, siteDisabled, siteEnabled, excludedVoices, dictCache`。content 脚本用 `chrome.storage.onChanged` 实时应用配置。`speakMode` 由 options 页两个复选框推导（`sentenceSpeak` + `wordFirst` → word / sentence / word_sentence）；`sentenceBreak` 是「朗读整句时，如何断句」单选（comma / period，默认 period）。
 - **悬停状态机规则**：光标落在同一单词（node+start+end 相同）不重置定时器；落到空白 `scheduleHide` 取消定时器；**窗口不活跃时（`!document.hasFocus()`）不响应悬停**——macOS Chrome 抑制后台窗口连续 `mousemove`，只投递一次入口事件，这正是边界词误触发的根因；光标离开文档 / 窗口失焦时清理悬停状态。改这块逻辑务必看 `docs/technical/bugfix-hover-trigger-at-window-boundary.md`。
 - **弹窗样式**：Shadow DOM + 内联 `!important` 抗页面样式；宽度首次内容加载后冻结为像素（`lockPopupWidth`）。
 - **词典缓存**：background 内存 + storage.local（`DICT_CACHE_MAX=300` LRU）；content 也有一份内存缓存。翻译缓存只存成功结果。

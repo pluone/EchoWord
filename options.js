@@ -19,6 +19,7 @@ const previewCustom = document.getElementById('previewCustom');
 const hoverDelayRadios = document.querySelectorAll('input[name="hoverDelay"]');
 const autoSpeakInput = document.getElementById('autoSpeak');
 const sentenceSpeakInput = document.getElementById('sentenceSpeak');
+const sentenceBreakRadios = document.querySelectorAll('input[name="sentenceBreak"]');
 const wordFirstInput = document.getElementById('wordFirst');
 const wordFirstRow = document.getElementById('wordFirstRow');
 const stickyPopupInput = document.getElementById('stickyPopup');
@@ -34,6 +35,7 @@ const DEFAULTS = {
   hoverDelay: 600,
   autoSpeak: false,
   speakMode: 'word', // 'word' 单词 | 'sentence' 整句 | 'word_sentence' 先单词后整句
+  sentenceBreak: 'period', // 朗读整句断句：'period' 句号（默认）| 'comma' 逗号
   stickyPopup: false,
   translator: 'google', // 'google' | 'bing'
   phonetics: 'us', // 'us' 美式 | 'uk' 英式
@@ -207,8 +209,14 @@ async function loadVolumeRate() {
 
 async function loadHoverOptions() {
   const cfg = await chrome.storage.local.get(DEFAULTS);
+  // 旧版可选的立即 / 0.1 秒已移除，存储仍为这些值时回退到默认，避免单选框组无选中项。
+  const delayValues = new Set(Array.from(hoverDelayRadios, (r) => r.value));
+  const delay = delayValues.has(String(cfg.hoverDelay))
+    ? cfg.hoverDelay
+    : DEFAULTS.hoverDelay;
+  if (delay !== cfg.hoverDelay) chrome.storage.local.set({ hoverDelay: delay });
   for (const radio of hoverDelayRadios) {
-    radio.checked = radio.value === String(cfg.hoverDelay);
+    radio.checked = radio.value === String(delay);
   }
   autoSpeakInput.checked = !!cfg.autoSpeak;
   // 迁移：旧版布尔 sentenceSpeak → speakMode。
@@ -217,6 +225,9 @@ async function loadHoverOptions() {
   }
   sentenceSpeakInput.checked = cfg.speakMode !== 'word';
   wordFirstInput.checked = cfg.speakMode === 'word_sentence';
+  for (const radio of sentenceBreakRadios) {
+    radio.checked = radio.value === cfg.sentenceBreak;
+  }
   syncWordFirstRow();
   stickyPopupInput.checked = !!cfg.stickyPopup;
   for (const radio of translatorRadios) {
@@ -336,6 +347,14 @@ for (const radio of phoneticsRadios) {
   radio.addEventListener('change', () => {
     if (radio.checked) {
       chrome.storage.local.set({ phonetics: radio.value });
+    }
+  });
+}
+
+for (const radio of sentenceBreakRadios) {
+  radio.addEventListener('change', () => {
+    if (radio.checked) {
+      chrome.storage.local.set({ sentenceBreak: radio.value });
     }
   });
 }

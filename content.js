@@ -14,6 +14,8 @@ const DEFAULT_OPTIONS = {
   // 朗读模式：'word' 只朗读单词 | 'sentence' 只朗读整句 |
   // 'word_sentence' 先朗读单词，再朗读整句（见 speakFor）。
   speakMode: 'word',
+  // 朗读整句时的断句方式：'period' 断到句号（默认）| 'comma' 断到逗号等句内停顿。
+  sentenceBreak: 'period',
   stickyPopup: false,
   phonetics: 'us', // 弹窗中展示的音标：'us' 美式（默认）| 'uk' 英式
   popupMode: 'hover_click', // 弹窗触发方式，见 popupModeConfig
@@ -287,11 +289,12 @@ function rangeRect(node, start, end) {
 
 // ---------- 整句提取 ----------
 //
-// 从单词所在文本节点提取所在整句。句子可能跨多个文本节点
+// 从单词所在文本节点提取所在句子。句子可能跨多个文本节点
 // （如 <span>Hello</span> <span>world.</span>），因此：
 // 1. 以最近 block 级祖先为边界收集文本，避免跨段落拼接；
 // 2. 识别常见缩写（Mr. / U.S. / e.g. 等），避免把缩写句点当句末；
-// 3. 句子超过 MAX_SENTENCE_WORDS 个单词时，以当前词为中心截取。
+// 3. 同一文本可有两种口径：翻译用整句（读到句末标点、不截取），
+//    朗读用片段（stopAtComma 断到逗号等句内停顿、且 MAX_SENTENCE_WORDS 截取）。
 
 const MAX_SENTENCE_WORDS = 30;
 const MAX_BLOCK_TEXT = 8000; // block 文本收集上限，防止大页面卡顿
@@ -341,6 +344,18 @@ function isSentenceEnd(text, i) {
   }
   if (/^[A-Z](\.?[A-Z])*$/.test(token)) return false; // J. / U.S. 式大写缩写
   return true;
+}
+
+// 句子片段边界：stopAtComma 为真（用于朗读）时，逗号/分号/冒号等句内停顿
+// 也视作片段断点，使朗读片段更短；翻译仍用整句（stopAtComma 为假）。
+function isSentenceBoundary(text, i, stopAtComma) {
+  if (isSentenceEnd(text, i)) return true;
+  if (stopAtComma) {
+    const ch = text[i];
+    return ch === ',' || ch === ';' || ch === ':' ||
+      ch === '，' || ch === '；' || ch === '：';
+  }
+  return false;
 }
 
 // 是否算作 block 级元素：句子遍历的边界，避免跨段落获取不相关文本。
@@ -440,8 +455,10 @@ function capSentence(sentence, wordStart, wordEnd) {
   return sentence.slice(tokens[lo].start, tokens[hi - 1].end).trim();
 }
 
-// 从单词所在文本节点提取整句。
-function sentenceFromWord(info) {
+// 从单词所在文本节点提取句子片段。
+// stopAtComma：朗读用，读到逗号等句内停顿即断，片段更短；
+// capWords：朗读用，片段超过 30 词时以当前词为中心截取（翻译不用，保留整段）。
+function sentenceFromWord(info, { stopAtComma = false, capWords = true } = {}) {
   // 最近 block 级祖先即遍历边界，避免跨段落获取不相关文本。
   let block = info.node.parentElement;
   while (block && !isBlockLevel(block)) block = block.parentElement;
@@ -454,18 +471,18 @@ function sentenceFromWord(info) {
   const wordStart = targetOffset < 0 ? info.start : targetOffset + info.start;
   const wordEnd = targetOffset < 0 ? info.end : targetOffset + info.end;
 
-  // 向前找句首：从当前词往前找最近一次句末标点。
+  // 向前找片段起点：从当前词往前找最近一次断点。
   let s = 0;
   for (let i = wordStart - 1; i >= 0; i--) {
-    if (isSentenceEnd(text, i)) {
+    if (isSentenceBoundary(text, i, stopAtComma)) {
       s = skipClosers(text, i);
       break;
     }
   }
-  // 向后找句尾：从当前词往后找下一次句末标点（含标点本身）。
+  // 向后找片段终点：从当前词往后找下一次断点（含标点本身）。
   let e = text.length;
   for (let i = wordEnd; i < text.length; i++) {
-    if (isSentenceEnd(text, i)) {
+    if (isSentenceBoundary(text, i, stopAtComma)) {
       e = skipClosers(text, i);
       break;
     }
@@ -474,7 +491,22 @@ function sentenceFromWord(info) {
   const raw = text.slice(s, e);
   const { text: sentence, lead } = cleanSentence(raw);
   if (!sentence) return info.word;
+  if (!capWords) return sentence;
   return capSentence(sentence, wordStart - s - lead, wordEnd - s - lead);
+}
+
+// 朗读用句子片段：按断句选项（sentenceBreak）断到句号或逗号，超过 30 词时截取。
+// 翻译仍走 sentenceForTranslation（始终读完整整句，不受该选项影响）。
+function sentenceForSpeak(info) {
+  return sentenceFromWord(info, {
+    stopAtComma: cfg.sentenceBreak === 'comma',
+    capWords: true,
+  });
+}
+
+// 翻译用整句：断到句末标点，不截取（保留完整整句）。
+function sentenceForTranslation(info) {
+  return sentenceFromWord(info, { stopAtComma: false, capWords: false });
 }
 
 // ---------- 朗读 ----------
@@ -487,12 +519,13 @@ function speakText(text) {
 // - 'sentence'：只朗读整句；'word'：只朗读单词（默认）；
 // - 'word_sentence'：先朗读单词，单词发音结束后再延迟固定间隔（WORD_SENTENCE_GAP），
 //   然后朗读整句（时序在 background 的 TTS onEvent 中处理）。
-function speakFor(info, sentence) {
+function speakFor(info) {
   const mode = cfg.speakMode;
+  // 朗读用片段与翻译用的整句不同（朗读断到逗号），故在朗读时单独提取。
+  const sentence = sentenceForSpeak(info);
 
   if (mode === 'sentence') {
-    const text = sentence || sentenceFromWord(info);
-    if (text) speakText(text);
+    if (sentence) speakText(sentence);
     return;
   }
 
@@ -502,12 +535,11 @@ function speakFor(info, sentence) {
     return;
   }
 
-  const text = sentence || sentenceFromWord(info);
   chrome.runtime
     .sendMessage({
       type: 'speakSequence',
       text: info.word,
-      sentence: text,
+      sentence: sentence,
       gap: WORD_SENTENCE_GAP,
     })
     .catch(() => { });
@@ -710,14 +742,14 @@ function showPopup(info) {
   renderPopup(info.word);
   positionPopup(info);
   visible = true;
-  // 所在整句：整句翻译与整句朗读共用，只提取一次。
-  const sentence = sentenceFromWord(info);
+  // 翻译用整句：读到句末标点、不做 30 词截取；朗读用的片段与之不同，在 speakFor 里单独提取。
+  const sentence = sentenceForTranslation(info);
   activeSentence = sentence;
   loadTranslation(sentence);
   loadDict(info.word);
   if (!cfg.autoSpeak) return;
   // 各朗读模式在 speakFor 内处理（单词 / 整句 / 先单词后整句）。
-  speakFor(info, sentence);
+  speakFor(info);
 }
 
 function hidePopup() {

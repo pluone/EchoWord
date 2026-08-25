@@ -55,6 +55,16 @@ select {
   margin: 0;
 }
 
+/* 音量 / 播放速度两列并排，各占一半宽度。 */
+.ctrl-row {
+  display: flex;
+  gap: 24px;
+}
+.ctrl-col {
+  flex: 1;
+  min-width: 0;
+}
+
 output {
   font-size: 13px;
   color: #888;

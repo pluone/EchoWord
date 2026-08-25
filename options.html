@@ -1,10 +1,12 @@
 <!doctype html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="utf-8" />
   <link rel="stylesheet" href="options.css" />
   <title>echo word 设置</title>
 </head>
+
 <body>
   <main>
     <h1>echo word 设置</h1>
@@ -21,12 +23,7 @@
     </section>
 
     <section class="field">
-      <button
-        type="button"
-        id="excludedToggle"
-        class="excluded-toggle"
-        aria-expanded="false"
-      >
+      <button type="button" id="excludedToggle" class="excluded-toggle" aria-expanded="false">
         <span class="excluded-arrow" aria-hidden="true">▶</span>
         <span>已剔除声音</span>
         <span id="excludedCount" class="excluded-count"></span>
@@ -38,34 +35,29 @@
     </section>
 
     <section class="field">
-      <div class="field-head">
-        <label for="volume">音量</label>
-        <output id="volumeValue" for="volume">100%</output>
+      <div class="ctrl-row">
+        <div class="ctrl-col">
+          <div class="field-head">
+            <label for="volume">音量</label>
+            <output id="volumeValue" for="volume">100%</output>
+          </div>
+          <input type="range" id="volume" min="0" max="100" step="1" value="100" />
+          <div class="ticks" id="volumeTicks"></div>
+        </div>
+        <div class="ctrl-col">
+          <div class="field-head">
+            <label for="rate">播放速度</label>
+            <output id="rateValue" for="rate">1.0×</output>
+          </div>
+          <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1" />
+          <div class="ticks" id="rateTicks"></div>
+        </div>
       </div>
-      <input type="range" id="volume" min="0" max="100" step="1" value="100" />
-      <div class="ticks" id="volumeTicks"></div>
-    </section>
-
-    <section class="field">
-      <div class="field-head">
-        <label for="rate">播放速度</label>
-        <output id="rateValue" for="rate">1.0×</output>
-      </div>
-      <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1" />
-      <div class="ticks" id="rateTicks"></div>
     </section>
 
     <section class="field">
       <label>悬停弹出延迟</label>
       <div class="radio-group">
-        <label class="radio-row">
-          <input type="radio" name="hoverDelay" value="0" />
-          <span>立即（不推荐）</span>
-        </label>
-        <label class="radio-row">
-          <input type="radio" name="hoverDelay" value="100" />
-          <span>0.1 秒（不推荐）</span>
-        </label>
         <label class="radio-row">
           <input type="radio" name="hoverDelay" value="300" />
           <span>0.3 秒</span>
@@ -185,6 +177,21 @@
     </section>
 
     <section class="field">
+      <label>朗读整句时，如何断句</label>
+      <div class="radio-group" id="sentenceBreakGroup">
+        <label class="radio-row">
+          <input type="radio" name="sentenceBreak" value="comma" />
+          <span>断句到逗号（句子更短，更易把握）</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="sentenceBreak" value="period" />
+          <span>断句到句号（默认）</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="field">
+      <label>基础选项</label>
       <div class="checkbox-row">
         <input type="checkbox" id="autoSpeak" />
         <label for="autoSpeak">弹窗出现后自动播放发音</label>
@@ -205,14 +212,11 @@
 
     <section class="field">
       <label for="previewText">自定义试听</label>
-      <textarea
-        id="previewText"
-        rows="3"
-        placeholder="输入或粘贴一段文字，点击「播放」用当前选中的声音朗读试听……"
-      ></textarea>
+      <textarea id="previewText" rows="3" placeholder="输入或粘贴一段文字，点击「播放」用当前选中的声音朗读试听……"></textarea>
       <button type="button" id="previewCustom" class="preview-custom">▶ 播放</button>
     </section>
   </main>
   <script src="options.js"></script>
 </body>
+
 </html>
