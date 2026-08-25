@@ -1,0 +1,278 @@
+{
+  "extName": {
+    "message": "EchoWord",
+    "description": "扩展名称"
+  },
+  "extDescription": {
+    "message": "悬停英文单词即弹出卡片，展示音标、释义与例句，并通过发音在句子的语感中学会单词。",
+    "description": "扩展描述"
+  },
+
+  "optionsTitle": {
+    "message": "EchoWord 设置",
+    "description": "设置页标题"
+  },
+  "loadVoiceLabel": {
+    "message": "朗读声音",
+    "description": "朗读声音设置项标签"
+  },
+  "previewButton": {
+    "message": "试听",
+    "description": "试听按钮"
+  },
+  "excludeButton": {
+    "message": "剔除",
+    "description": "剔除按钮"
+  },
+  "excludedVoicesLabel": {
+    "message": "已剔除声音",
+    "description": "已剔除声音折叠标题"
+  },
+  "volumeLabel": {
+    "message": "音量",
+    "description": "音量设置项标签"
+  },
+  "rateLabel": {
+    "message": "播放速度",
+    "description": "播放速度设置项标签"
+  },
+  "hoverDelayLabel": {
+    "message": "悬停弹出延迟",
+    "description": "悬停延迟设置项标签"
+  },
+  "hoverDelay0300": {
+    "message": "0.3 秒",
+    "description": "悬停延迟选项 0.3 秒"
+  },
+  "hoverDelay0600": {
+    "message": "0.6 秒（默认）",
+    "description": "悬停延迟选项 0.6 秒"
+  },
+  "hoverDelay1000": {
+    "message": "1.0 秒",
+    "description": "悬停延迟选项 1.0 秒"
+  },
+  "hoverDelay1500": {
+    "message": "1.5 秒",
+    "description": "悬停延迟选项 1.5 秒"
+  },
+  "popupModeLabel": {
+    "message": "弹窗触发方式（Pop-up mode）",
+    "description": "弹窗触发方式设置项标签"
+  },
+  "popupModeHoverClick": {
+    "message": "悬停或点击单词/短语即可打开弹窗（默认）",
+    "description": "弹窗触发方式：悬停或点击"
+  },
+  "popupModeHover": {
+    "message": "仅悬停单词/短语时打开弹窗",
+    "description": "弹窗触发方式：仅悬停"
+  },
+  "popupModeClick": {
+    "message": "仅点击或轻触单词/短语时打开弹窗",
+    "description": "弹窗触发方式：仅点击"
+  },
+  "popupModeAltClickMac": {
+    "message": "仅按住 Option 键点击单词/短语时打开弹窗",
+    "description": "弹窗触发方式：macOS Option+点击"
+  },
+  "popupModeAltClickWin": {
+    "message": "仅按住 Alt 键点击单词/短语时打开弹窗",
+    "description": "弹窗触发方式：Windows Alt+点击"
+  },
+  "popupModeCommandClick": {
+    "message": "仅按住 Command 键点击单词/短语时打开弹窗",
+    "description": "弹窗触发方式：Command+点击"
+  },
+  "popupModeHoverCommand": {
+    "message": "仅悬停单词/短语后按下 Command 键时打开弹窗",
+    "description": "弹窗触发方式：悬停后按 Command"
+  },
+  "popupModeControlClick": {
+    "message": "仅按住 Ctrl 键点击单词/短语时打开弹窗",
+    "description": "弹窗触发方式：Windows Ctrl+点击"
+  },
+  "popupModeHoverControlMac": {
+    "message": "仅悬停单词/短语后按下 Control 键时打开弹窗",
+    "description": "弹窗触发方式：macOS 悬停后按 Control"
+  },
+  "popupModeHoverControlWin": {
+    "message": "仅悬停单词/短语后按下 Ctrl 键时打开弹窗",
+    "description": "弹窗触发方式：Windows 悬停后按 Ctrl"
+  },
+  "popupModeDisable": {
+    "message": "禁用弹窗",
+    "description": "弹窗触发方式：禁用"
+  },
+  "popupModeHint": {
+    "message": "选择弹窗的打开方式，选项随系统类型显示。",
+    "description": "弹窗触发方式提示"
+  },
+  "translatorLabel": {
+    "message": "整句翻译引擎",
+    "description": "翻译引擎设置项标签"
+  },
+  "translatorGoogle": {
+    "message": "谷歌翻译（默认）",
+    "description": "翻译引擎：谷歌"
+  },
+  "translatorBing": {
+    "message": "必应翻译",
+    "description": "翻译引擎：必应"
+  },
+  "translatorHint": {
+    "message": "悬停卡片里句子中文译文所使用的翻译服务。",
+    "description": "翻译引擎提示"
+  },
+  "phoneticsLabel": {
+    "message": "弹窗音标",
+    "description": "音标设置项标签"
+  },
+  "phoneticsUs": {
+    "message": "美式（默认）",
+    "description": "音标：美式"
+  },
+  "phoneticsUk": {
+    "message": "英式",
+    "description": "音标：英式"
+  },
+  "phoneticsHint": {
+    "message": "悬停卡片里展示哪种音标（只显示一种）。",
+    "description": "音标设置提示"
+  },
+  "sentenceBreakLabel": {
+    "message": "朗读整句时，如何断句",
+    "description": "断句设置项标签"
+  },
+  "sentenceBreakComma": {
+    "message": "断句到逗号（句子更短，更易把握）",
+    "description": "断句方式：逗号"
+  },
+  "sentenceBreakPeriod": {
+    "message": "断句到句号（默认）",
+    "description": "断句方式：句号"
+  },
+  "basicOptionsLabel": {
+    "message": "基础选项",
+    "description": "基础选项分组标签"
+  },
+  "autoSpeakLabel": {
+    "message": "弹窗出现后自动播放发音",
+    "description": "自动发音复选框"
+  },
+  "sentenceSpeakLabel": {
+    "message": "使用 TTS 朗读整句，而非单个单词",
+    "description": "朗读整句复选框"
+  },
+  "wordFirstLabel": {
+    "message": "先朗读单词，再朗读整句",
+    "description": "先读单词复选框"
+  },
+  "stickyPopupLabel": {
+    "message": "仅在点击外部、点击 X 图标或按 Esc 时关闭弹窗",
+    "description": "固定弹窗复选框"
+  },
+  "customPreviewLabel": {
+    "message": "自定义试听",
+    "description": "自定义试听分组标签"
+  },
+  "previewTextPlaceholder": {
+    "message": "输入或粘贴一段文字，点击「播放」用当前选中的声音朗读试听……",
+    "description": "自定义试听输入框占位符"
+  },
+  "previewPlayButton": {
+    "message": "▶ 播放",
+    "description": "自定义试听播放按钮"
+  },
+
+  "autoVoice": {
+    "message": "自动（默认）",
+    "description": "语音下拉框自动选项"
+  },
+  "remoteVoiceSuffix": {
+    "message": "（需要联网）",
+    "description": "远程语音标注后缀"
+  },
+  "previewTitle": {
+    "message": "试听",
+    "description": "已剔除列表中试听按钮标题"
+  },
+  "restoreButton": {
+    "message": "恢复",
+    "description": "恢复声音按钮"
+  },
+  "noExcludedVoices": {
+    "message": "暂无已剔除声音。",
+    "description": "已剔除列表为空时提示"
+  },
+  "excludedVoicesHelp": {
+    "message": "不喜欢的语音已移到这里，点击「恢复」可放回朗读列表。",
+    "description": "已剔除列表说明"
+  },
+  "noEnglishVoice": {
+    "message": "未找到英文语音，请检查系统 TTS 设置。",
+    "description": "没有英文语音时提示"
+  },
+  "loadVoicesFailed": {
+    "message": "加载语音失败：$1",
+    "description": "加载语音失败提示，$1 为错误信息"
+  },
+
+  "tabCurrent": {
+    "message": "当前站点",
+    "description": "popup 当前站点标签页"
+  },
+  "tabAll": {
+    "message": "全部网站",
+    "description": "popup 全部网站标签页"
+  },
+  "ariaEnableSite": {
+    "message": "在此网站启用",
+    "description": "当前站点开关的无障碍标签"
+  },
+  "allSitesTitle": {
+    "message": "全部网站",
+    "description": "popup 全部网站行标题"
+  },
+  "ariaEnableAll": {
+    "message": "全部网站启用",
+    "description": "全局开关的无障碍标签"
+  },
+  "openFullSettings": {
+    "message": "打开完整设置",
+    "description": "popup 底部打开设置按钮"
+  },
+  "siteEnabledDesc": {
+    "message": "此网站已启用",
+    "description": "当前站点已启用描述"
+  },
+  "siteDisabledDesc": {
+    "message": "此网站已停用",
+    "description": "当前站点已停用描述"
+  },
+  "allEnabledDesc": {
+    "message": "默认启用所有网站，可单独关闭个别网站",
+    "description": "全局开启描述"
+  },
+  "allDisabledDesc": {
+    "message": "默认停用所有网站，可单独开启个别网站",
+    "description": "全局关闭描述"
+  },
+  "currentPage": {
+    "message": "当前页面",
+    "description": "站点为空时的回退文本"
+  },
+  "noInjectHint": {
+    "message": "此页面不支持注入脚本，无法在此启用或禁用。",
+    "description": "无法注入脚本的页面提示"
+  },
+
+  "speakLabel": {
+    "message": "朗读",
+    "description": "弹窗卡片朗读按钮标题"
+  },
+  "closeLabel": {
+    "message": "关闭",
+    "description": "弹窗卡片关闭按钮标题"
+  }
+}

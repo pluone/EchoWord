@@ -19,6 +19,18 @@ const openOptionsBtn = document.getElementById('openOptions');
 
 let host = '';
 
+// 把 HTML 里 data-i18n 标记的文本 / 属性替换为当前语言的字符串。
+// 扩展 HTML 文件不做 __MSG_ 原生替换，统一在这里用 chrome.i18n.getMessage() 填充。
+function localize() {
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.textContent = chrome.i18n.getMessage(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-aria-label]').forEach((el) => {
+    el.setAttribute('aria-label', chrome.i18n.getMessage(el.dataset.i18nAriaLabel));
+  });
+}
+localize();
+
 // 解析当前标签页地址：只有 http/https 页面才可能注入内容脚本。
 function parseTarget(url) {
   try {
@@ -69,14 +81,16 @@ async function setSite(siteMode, host, on) {
 function renderCurrent(state) {
   const on = siteOn(state.siteMode, host, state.disabled, state.enabled);
   if (enabledInput.checked !== on) enabledInput.checked = on;
-  siteDesc.textContent = on ? '此网站已启用' : '此网站已停用';
+  siteDesc.textContent = on
+    ? chrome.i18n.getMessage('siteEnabledDesc')
+    : chrome.i18n.getMessage('siteDisabledDesc');
 }
 
 function renderGlobal(state) {
   if (globalInput.checked !== state.global) globalInput.checked = state.global;
   allDesc.textContent = state.global
-    ? '默认启用所有网站，可单独关闭个别网站'
-    : '默认停用所有网站，可单独开启个别网站';
+    ? chrome.i18n.getMessage('allEnabledDesc')
+    : chrome.i18n.getMessage('allDisabledDesc');
 }
 
 async function renderAll() {
@@ -110,19 +124,20 @@ globalInput.addEventListener('change', () => setGlobal(globalInput.checked));
 openOptionsBtn.addEventListener('click', () => chrome.runtime.openOptionsPage());
 
 async function init() {
+  document.documentElement.lang = chrome.i18n.getMessage('@@ui_locale');
   // activeTab 权限：用户点击图标打开弹窗时，可以读到当前活动标签页的 URL。
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   const parsed = parseTarget(tab?.url || '');
   host = parsed.host;
-  siteEl.textContent = host || '当前页面';
+  siteEl.textContent = host || chrome.i18n.getMessage('currentPage');
 
   if (!parsed.usable) {
     // chrome://、扩展页等无法注入脚本的页面：开关置灰并提示。
-    siteEl.textContent = host || '当前页面';
+    siteEl.textContent = host || chrome.i18n.getMessage('currentPage');
     enabledInput.disabled = true;
     globalInput.disabled = true;
     hintEl.hidden = false;
-    hintEl.textContent = '此页面不支持注入脚本，无法在此启用或禁用。';
+    hintEl.textContent = chrome.i18n.getMessage('noInjectHint');
     return;
   }
 

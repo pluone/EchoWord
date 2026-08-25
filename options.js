@@ -51,6 +51,24 @@ const OS = (() => {
   return /mac/i.test(p) ? 'mac' : /win/i.test(p) ? 'windows' : 'other';
 })();
 
+// 把 HTML 里 data-i18n 标记的文本 / 属性替换为当前语言的字符串。
+// 扩展 HTML 文件不做 __MSG_ 原生替换，统一在这里用 chrome.i18n.getMessage() 填充。
+function localize() {
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.textContent = chrome.i18n.getMessage(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+    el.placeholder = chrome.i18n.getMessage(el.dataset.i18nPlaceholder);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    el.title = chrome.i18n.getMessage(el.dataset.i18nTitle);
+  });
+  document.querySelectorAll('[data-i18n-aria-label]').forEach((el) => {
+    el.setAttribute('aria-label', chrome.i18n.getMessage(el.dataset.i18nAriaLabel));
+  });
+}
+localize();
+
 // 试听用的样例英文（经典全字母句，便于听清各个音）。
 const SAMPLE_TEXT = 'The quick brown fox jumps over the lazy dog.';
 
@@ -91,7 +109,7 @@ async function refreshVoices() {
     voiceSelect.innerHTML = '';
     const auto = document.createElement('option');
     auto.value = '';
-    auto.textContent = '自动（默认）';
+    auto.textContent = chrome.i18n.getMessage('autoVoice');
     voiceSelect.appendChild(auto);
 
     for (const v of voices) {
@@ -99,7 +117,9 @@ async function refreshVoices() {
       const opt = document.createElement('option');
       opt.value = v.voiceName;
       // 远程语音需要联网才能发音，这里显式标注。
-      opt.textContent = v.remote ? `${v.voiceName}（需要联网）` : v.voiceName;
+      opt.textContent = v.remote
+        ? `${v.voiceName}${chrome.i18n.getMessage('remoteVoiceSuffix')}`
+        : v.voiceName;
       voiceSelect.appendChild(opt);
     }
 
@@ -123,7 +143,7 @@ async function refreshVoices() {
       const play = document.createElement('button');
       play.type = 'button';
       play.className = 'play-btn';
-      play.title = '试听';
+      play.title = chrome.i18n.getMessage('previewTitle');
       play.textContent = '▶';
       play.addEventListener('click', () => {
         sampleText.textContent = SAMPLE_TEXT;
@@ -140,7 +160,7 @@ async function refreshVoices() {
       const restore = document.createElement('button');
       restore.type = 'button';
       restore.className = 'restore-btn';
-      restore.textContent = '恢复';
+      restore.textContent = chrome.i18n.getMessage('restoreButton');
       restore.addEventListener('click', () => restoreVoice(v.voiceName));
 
       actions.append(play, restore);
@@ -151,13 +171,13 @@ async function refreshVoices() {
       excludedItems.length > 0 ? `(${excludedItems.length})` : '';
     excludedHint.textContent =
       excludedItems.length === 0
-        ? '暂无已剔除声音。'
-        : '不喜欢的语音已移到这里，点击「恢复」可放回朗读列表。';
+        ? chrome.i18n.getMessage('noExcludedVoices')
+        : chrome.i18n.getMessage('excludedVoicesHelp');
 
     voiceHint.textContent =
-      voices.length === 0 ? '未找到英文语音，请检查系统 TTS 设置。' : '';
+      voices.length === 0 ? chrome.i18n.getMessage('noEnglishVoice') : '';
   } catch (err) {
-    voiceHint.textContent = '加载语音失败：' + err.message;
+    voiceHint.textContent = chrome.i18n.getMessage('loadVoicesFailed', err.message);
   }
 }
 
@@ -369,6 +389,7 @@ for (const radio of document.querySelectorAll('input[name="popupMode"]')) {
 }
 
 async function init() {
+  document.documentElement.lang = chrome.i18n.getMessage('@@ui_locale');
   renderTicks(
     volumeTicks,
     Number(volumeInput.min),

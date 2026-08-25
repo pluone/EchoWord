@@ -1,0 +1,278 @@
+{
+  "extName": {
+    "message": "EchoWord",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "Hover over an English word to pop up a card with phonetics, definitions and a sentence translation — learn words through the rhythm of sentences with TTS pronunciation.",
+    "description": "Extension description (shown on the Web Store and in chrome://extensions)"
+  },
+
+  "optionsTitle": {
+    "message": "EchoWord Settings",
+    "description": "Options page title"
+  },
+  "loadVoiceLabel": {
+    "message": "Reading voice",
+    "description": "Voice setting label"
+  },
+  "previewButton": {
+    "message": "Preview",
+    "description": "Preview button"
+  },
+  "excludeButton": {
+    "message": "Exclude",
+    "description": "Exclude button"
+  },
+  "excludedVoicesLabel": {
+    "message": "Excluded voices",
+    "description": "Excluded voices collapsible title"
+  },
+  "volumeLabel": {
+    "message": "Volume",
+    "description": "Volume setting label"
+  },
+  "rateLabel": {
+    "message": "Playback speed",
+    "description": "Rate setting label"
+  },
+  "hoverDelayLabel": {
+    "message": "Hover pop-up delay",
+    "description": "Hover delay setting label"
+  },
+  "hoverDelay0300": {
+    "message": "0.3s",
+    "description": "Hover delay option 0.3s"
+  },
+  "hoverDelay0600": {
+    "message": "0.6s (default)",
+    "description": "Hover delay option 0.6s"
+  },
+  "hoverDelay1000": {
+    "message": "1.0s",
+    "description": "Hover delay option 1.0s"
+  },
+  "hoverDelay1500": {
+    "message": "1.5s",
+    "description": "Hover delay option 1.5s"
+  },
+  "popupModeLabel": {
+    "message": "Popup trigger mode",
+    "description": "Popup trigger mode setting label"
+  },
+  "popupModeHoverClick": {
+    "message": "Hover or click a word/phrase to open the popup (default)",
+    "description": "Popup trigger: hover or click"
+  },
+  "popupModeHover": {
+    "message": "Only open the popup when hovering over a word/phrase",
+    "description": "Popup trigger: hover only"
+  },
+  "popupModeClick": {
+    "message": "Only open the popup when clicking or tapping a word/phrase",
+    "description": "Popup trigger: click only"
+  },
+  "popupModeAltClickMac": {
+    "message": "Only open the popup when holding Option and clicking a word/phrase",
+    "description": "Popup trigger: macOS Option-click"
+  },
+  "popupModeAltClickWin": {
+    "message": "Only open the popup when holding Alt and clicking a word/phrase",
+    "description": "Popup trigger: Windows Alt-click"
+  },
+  "popupModeCommandClick": {
+    "message": "Only open the popup when holding Command and clicking a word/phrase",
+    "description": "Popup trigger: Command-click"
+  },
+  "popupModeHoverCommand": {
+    "message": "Only open the popup when hovering a word/phrase and pressing Command",
+    "description": "Popup trigger: hover then press Command"
+  },
+  "popupModeControlClick": {
+    "message": "Only open the popup when holding Ctrl and clicking a word/phrase",
+    "description": "Popup trigger: Windows Ctrl-click"
+  },
+  "popupModeHoverControlMac": {
+    "message": "Only open the popup when hovering a word/phrase and pressing Control",
+    "description": "Popup trigger: macOS hover then press Control"
+  },
+  "popupModeHoverControlWin": {
+    "message": "Only open the popup when hovering a word/phrase and pressing Ctrl",
+    "description": "Popup trigger: Windows hover then press Ctrl"
+  },
+  "popupModeDisable": {
+    "message": "Disable popup",
+    "description": "Popup trigger: disabled"
+  },
+  "popupModeHint": {
+    "message": "Choose how the popup opens; the options shown depend on your system.",
+    "description": "Popup trigger mode hint"
+  },
+  "translatorLabel": {
+    "message": "Sentence translation engine",
+    "description": "Translator setting label"
+  },
+  "translatorGoogle": {
+    "message": "Google Translate (default)",
+    "description": "Translator: Google"
+  },
+  "translatorBing": {
+    "message": "Bing Translator",
+    "description": "Translator: Bing"
+  },
+  "translatorHint": {
+    "message": "The translation service used for the sentence translation shown in the popup card.",
+    "description": "Translator hint"
+  },
+  "phoneticsLabel": {
+    "message": "Phonetics",
+    "description": "Phonetics setting label"
+  },
+  "phoneticsUs": {
+    "message": "US (default)",
+    "description": "Phonetics: US"
+  },
+  "phoneticsUk": {
+    "message": "UK",
+    "description": "Phonetics: UK"
+  },
+  "phoneticsHint": {
+    "message": "Which phonetics to show in the popup card (only one at a time).",
+    "description": "Phonetics hint"
+  },
+  "sentenceBreakLabel": {
+    "message": "How to break sentences when reading aloud",
+    "description": "Sentence break setting label"
+  },
+  "sentenceBreakComma": {
+    "message": "Break at commas (shorter chunks, easier to follow)",
+    "description": "Sentence break: commas"
+  },
+  "sentenceBreakPeriod": {
+    "message": "Break at periods (default)",
+    "description": "Sentence break: periods"
+  },
+  "basicOptionsLabel": {
+    "message": "Basic options",
+    "description": "Basic options group label"
+  },
+  "autoSpeakLabel": {
+    "message": "Automatically pronounce the word when the popup appears",
+    "description": "Auto speak checkbox"
+  },
+  "sentenceSpeakLabel": {
+    "message": "Read the whole sentence with TTS instead of just the word",
+    "description": "Read sentence checkbox"
+  },
+  "wordFirstLabel": {
+    "message": "Read the word first, then the whole sentence",
+    "description": "Word first checkbox"
+  },
+  "stickyPopupLabel": {
+    "message": "Only close the popup when clicking outside, clicking the X icon, or pressing Esc",
+    "description": "Sticky popup checkbox"
+  },
+  "customPreviewLabel": {
+    "message": "Custom preview",
+    "description": "Custom preview group label"
+  },
+  "previewTextPlaceholder": {
+    "message": "Enter or paste some text, then click Play to read it aloud with the currently selected voice…",
+    "description": "Custom preview textarea placeholder"
+  },
+  "previewPlayButton": {
+    "message": "▶ Play",
+    "description": "Custom preview play button"
+  },
+
+  "autoVoice": {
+    "message": "Automatic (default)",
+    "description": "Automatic option in the voice dropdown"
+  },
+  "remoteVoiceSuffix": {
+    "message": " (requires network)",
+    "description": "Suffix marking remote voices"
+  },
+  "previewTitle": {
+    "message": "Preview",
+    "description": "Preview button title in the excluded list"
+  },
+  "restoreButton": {
+    "message": "Restore",
+    "description": "Restore voice button"
+  },
+  "noExcludedVoices": {
+    "message": "No excluded voices.",
+    "description": "Hint when the excluded list is empty"
+  },
+  "excludedVoicesHelp": {
+    "message": "Voices you don't like are moved here; click Restore to put them back on the reading list.",
+    "description": "Description for the excluded list"
+  },
+  "noEnglishVoice": {
+    "message": "No English voice found. Check your system TTS settings.",
+    "description": "Hint when no English voice is available"
+  },
+  "loadVoicesFailed": {
+    "message": "Failed to load voices: $1",
+    "description": "Error loading voices, $1 is the error message"
+  },
+
+  "tabCurrent": {
+    "message": "Current site",
+    "description": "Popup tab: current site"
+  },
+  "tabAll": {
+    "message": "All sites",
+    "description": "Popup tab: all sites"
+  },
+  "ariaEnableSite": {
+    "message": "Enable on this site",
+    "description": "Accessible label for the current-site toggle"
+  },
+  "allSitesTitle": {
+    "message": "All sites",
+    "description": "Popup all-sites row title"
+  },
+  "ariaEnableAll": {
+    "message": "Enable on all sites",
+    "description": "Accessible label for the global toggle"
+  },
+  "openFullSettings": {
+    "message": "Open full settings",
+    "description": "Popup footer button to open options"
+  },
+  "siteEnabledDesc": {
+    "message": "This site is enabled",
+    "description": "Current site enabled description"
+  },
+  "siteDisabledDesc": {
+    "message": "This site is disabled",
+    "description": "Current site disabled description"
+  },
+  "allEnabledDesc": {
+    "message": "All sites are enabled by default; you can disable individual sites",
+    "description": "Global-on description"
+  },
+  "allDisabledDesc": {
+    "message": "All sites are disabled by default; you can enable individual sites",
+    "description": "Global-off description"
+  },
+  "currentPage": {
+    "message": "Current page",
+    "description": "Fallback text when the host is empty"
+  },
+  "noInjectHint": {
+    "message": "Content scripts cannot be injected into this page, so it can't be enabled or disabled here.",
+    "description": "Hint on pages where content scripts can't be injected"
+  },
+
+  "speakLabel": {
+    "message": "Read aloud",
+    "description": "Read-aloud button title in the popup card"
+  },
+  "closeLabel": {
+    "message": "Close",
+    "description": "Close button title in the popup card"
+  }
+}

@@ -4,19 +4,19 @@
 <head>
   <meta charset="utf-8" />
   <link rel="stylesheet" href="options.css" />
-  <title>EchoWord 设置</title>
+  <title data-i18n="optionsTitle"></title>
 </head>
 
 <body>
   <main>
-    <h1>EchoWord 设置</h1>
+    <h1 data-i18n="optionsTitle"></h1>
 
     <section class="field">
-      <label for="voice">朗读声音</label>
+      <label for="voice" data-i18n="loadVoiceLabel"></label>
       <div class="voice-row">
         <select id="voice"></select>
-        <button id="preview" type="button">试听</button>
-        <button id="exclude" type="button">剔除</button>
+        <button id="preview" type="button" data-i18n="previewButton"></button>
+        <button id="exclude" type="button" data-i18n="excludeButton"></button>
       </div>
       <p id="sampleText" class="sample" hidden></p>
       <p class="hint" id="voiceHint"></p>
@@ -25,7 +25,7 @@
     <section class="field">
       <button type="button" id="excludedToggle" class="excluded-toggle" aria-expanded="false">
         <span class="excluded-arrow" aria-hidden="true">▶</span>
-        <span>已剔除声音</span>
+        <span data-i18n="excludedVoicesLabel"></span>
         <span id="excludedCount" class="excluded-count"></span>
       </button>
       <div id="excludedBody" class="excluded-body" hidden>
@@ -38,7 +38,7 @@
       <div class="ctrl-row">
         <div class="ctrl-col">
           <div class="field-head">
-            <label for="volume">音量</label>
+            <label for="volume" data-i18n="volumeLabel"></label>
             <output id="volumeValue" for="volume">100%</output>
           </div>
           <input type="range" id="volume" min="0" max="100" step="1" value="100" />
@@ -46,7 +46,7 @@
         </div>
         <div class="ctrl-col">
           <div class="field-head">
-            <label for="rate">播放速度</label>
+            <label for="rate" data-i18n="rateLabel"></label>
             <output id="rateValue" for="rate">1.0×</output>
           </div>
           <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1" />
@@ -56,164 +56,164 @@
     </section>
 
     <section class="field">
-      <label>悬停弹出延迟</label>
+      <label data-i18n="hoverDelayLabel"></label>
       <div class="radio-group">
         <label class="radio-row">
           <input type="radio" name="hoverDelay" value="300" />
-          <span>0.3 秒</span>
+          <span data-i18n="hoverDelay0300"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="hoverDelay" value="600" />
-          <span>0.6 秒（默认）</span>
+          <span data-i18n="hoverDelay0600"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="hoverDelay" value="1000" />
-          <span>1.0 秒</span>
+          <span data-i18n="hoverDelay1000"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="hoverDelay" value="1500" />
-          <span>1.5 秒</span>
+          <span data-i18n="hoverDelay1500"></span>
         </label>
       </div>
     </section>
 
     <section class="field">
-      <label>弹窗触发方式（Pop-up mode）</label>
+      <label data-i18n="popupModeLabel"></label>
       <div class="radio-group" id="popupModeMac">
         <label class="radio-row">
           <input type="radio" name="popupMode" value="hover_click" />
-          <span>悬停或点击单词/短语即可打开弹窗（默认）</span>
+          <span data-i18n="popupModeHoverClick"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="hover" />
-          <span>仅悬停单词/短语时打开弹窗</span>
+          <span data-i18n="popupModeHover"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="click" />
-          <span>仅点击或轻触单词/短语时打开弹窗</span>
+          <span data-i18n="popupModeClick"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="alt_click" />
-          <span>仅按住 Option 键点击单词/短语时打开弹窗</span>
+          <span data-i18n="popupModeAltClickMac"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="command_click" />
-          <span>仅按住 Command 键点击单词/短语时打开弹窗</span>
+          <span data-i18n="popupModeCommandClick"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="hover_command" />
-          <span>仅悬停单词/短语后按下 Command 键时打开弹窗</span>
+          <span data-i18n="popupModeHoverCommand"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="hover_control" />
-          <span>仅悬停单词/短语后按下 Control 键时打开弹窗</span>
+          <span data-i18n="popupModeHoverControlMac"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="disable" />
-          <span>禁用弹窗</span>
+          <span data-i18n="popupModeDisable"></span>
         </label>
       </div>
       <div class="radio-group" id="popupModeWindows" hidden>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="hover_click" />
-          <span>悬停或点击单词/短语即可打开弹窗（默认）</span>
+          <span data-i18n="popupModeHoverClick"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="hover" />
-          <span>仅悬停单词/短语时打开弹窗</span>
+          <span data-i18n="popupModeHover"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="click" />
-          <span>仅点击或轻触单词/短语时打开弹窗</span>
+          <span data-i18n="popupModeClick"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="alt_click" />
-          <span>仅按住 Alt 键点击单词/短语时打开弹窗</span>
+          <span data-i18n="popupModeAltClickWin"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="control_click" />
-          <span>仅按住 Ctrl 键点击单词/短语时打开弹窗</span>
+          <span data-i18n="popupModeControlClick"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="hover_control" />
-          <span>仅悬停单词/短语后按下 Ctrl 键时打开弹窗</span>
+          <span data-i18n="popupModeHoverControlWin"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="popupMode" value="disable" />
-          <span>禁用弹窗</span>
+          <span data-i18n="popupModeDisable"></span>
         </label>
       </div>
-      <p class="hint">选择弹窗的打开方式，选项随系统类型显示。</p>
+      <p class="hint" data-i18n="popupModeHint"></p>
     </section>
 
     <section class="field">
-      <label>整句翻译引擎</label>
+      <label data-i18n="translatorLabel"></label>
       <div class="radio-group">
         <label class="radio-row">
           <input type="radio" name="translator" value="google" />
-          <span>谷歌翻译（默认）</span>
+          <span data-i18n="translatorGoogle"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="translator" value="bing" />
-          <span>必应翻译</span>
+          <span data-i18n="translatorBing"></span>
         </label>
       </div>
-      <p class="hint">悬停卡片里句子中文译文所使用的翻译服务。</p>
+      <p class="hint" data-i18n="translatorHint"></p>
     </section>
 
     <section class="field">
-      <label>弹窗音标</label>
+      <label data-i18n="phoneticsLabel"></label>
       <div class="radio-group">
         <label class="radio-row">
           <input type="radio" name="phonetics" value="us" />
-          <span>美式（默认）</span>
+          <span data-i18n="phoneticsUs"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="phonetics" value="uk" />
-          <span>英式</span>
+          <span data-i18n="phoneticsUk"></span>
         </label>
       </div>
-      <p class="hint">悬停卡片里展示哪种音标（只显示一种）。</p>
+      <p class="hint" data-i18n="phoneticsHint"></p>
     </section>
 
     <section class="field">
-      <label>朗读整句时，如何断句</label>
+      <label data-i18n="sentenceBreakLabel"></label>
       <div class="radio-group" id="sentenceBreakGroup">
         <label class="radio-row">
           <input type="radio" name="sentenceBreak" value="comma" />
-          <span>断句到逗号（句子更短，更易把握）</span>
+          <span data-i18n="sentenceBreakComma"></span>
         </label>
         <label class="radio-row">
           <input type="radio" name="sentenceBreak" value="period" />
-          <span>断句到句号（默认）</span>
+          <span data-i18n="sentenceBreakPeriod"></span>
         </label>
       </div>
     </section>
 
     <section class="field">
-      <label>基础选项</label>
+      <label data-i18n="basicOptionsLabel"></label>
       <div class="checkbox-row">
         <input type="checkbox" id="autoSpeak" />
-        <label for="autoSpeak">弹窗出现后自动播放发音</label>
+        <label for="autoSpeak" data-i18n="autoSpeakLabel"></label>
       </div>
       <div class="checkbox-row">
         <input type="checkbox" id="sentenceSpeak" />
-        <label for="sentenceSpeak">使用 TTS 朗读整句，而非单个单词</label>
+        <label for="sentenceSpeak" data-i18n="sentenceSpeakLabel"></label>
       </div>
       <div class="checkbox-row indent" id="wordFirstRow">
         <input type="checkbox" id="wordFirst" />
-        <label for="wordFirst">先朗读单词，再朗读整句</label>
+        <label for="wordFirst" data-i18n="wordFirstLabel"></label>
       </div>
       <div class="checkbox-row">
         <input type="checkbox" id="stickyPopup" />
-        <label for="stickyPopup">仅在点击外部、点击 X 图标或按 Esc 时关闭弹窗</label>
+        <label for="stickyPopup" data-i18n="stickyPopupLabel"></label>
       </div>
     </section>
 
     <section class="field">
-      <label for="previewText">自定义试听</label>
-      <textarea id="previewText" rows="3" placeholder="输入或粘贴一段文字，点击「播放」用当前选中的声音朗读试听……"></textarea>
-      <button type="button" id="previewCustom" class="preview-custom">▶ 播放</button>
+      <label for="previewText" data-i18n="customPreviewLabel"></label>
+      <textarea id="previewText" rows="3" data-i18n-placeholder="previewTextPlaceholder"></textarea>
+      <button type="button" id="previewCustom" class="preview-custom" data-i18n="previewPlayButton"></button>
     </section>
   </main>
   <script src="options.js"></script>

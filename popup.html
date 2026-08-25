@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <link rel="stylesheet" href="popup.css" />
-  <title>EchoWord</title>
+  <title data-i18n="extName"></title>
 </head>
 <body>
   <header class="popup-header">
@@ -16,15 +16,17 @@
       class="tab-btn"
       role="tab"
       data-tab="current"
+      data-i18n="tabCurrent"
       aria-selected="true"
-    >当前站点</button>
+    ></button>
     <button
       type="button"
       class="tab-btn"
       role="tab"
       data-tab="all"
+      data-i18n="tabAll"
       aria-selected="false"
-    >全部网站</button>
+    ></button>
   </nav>
 
   <!-- Tab 1：当前站点 -->
@@ -35,7 +37,7 @@
         <div class="row-desc" id="siteDesc"></div>
       </div>
       <label class="switch">
-        <input type="checkbox" id="enabled" aria-label="在此网站启用" />
+        <input type="checkbox" id="enabled" data-i18n-aria-label="ariaEnableSite" />
         <span class="track"><span class="thumb"></span></span>
       </label>
     </div>
@@ -46,18 +48,18 @@
   <section class="tab-panel" data-panel="all" role="tabpanel" hidden>
     <div class="row">
       <div class="row-text">
-        <div class="row-title">全部网站</div>
+        <div class="row-title" data-i18n="allSitesTitle"></div>
         <div class="row-desc" id="allDesc"></div>
       </div>
       <label class="switch">
-        <input type="checkbox" id="global" aria-label="全部网站启用" />
+        <input type="checkbox" id="global" data-i18n-aria-label="ariaEnableAll" />
         <span class="track"><span class="thumb"></span></span>
       </label>
     </div>
   </section>
 
   <footer class="popup-footer">
-    <button type="button" id="openOptions" class="link-btn">打开完整设置</button>
+    <button type="button" id="openOptions" class="link-btn" data-i18n="openFullSettings"></button>
   </footer>
 
   <script src="popup.js"></script>

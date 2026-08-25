@@ -195,10 +195,10 @@ shadow.innerHTML = `
 </style>
 <div class="popup">
   <div class="head">
-    <button class="btn speak" type="button" title="朗读" aria-label="朗读">${SPEAKER_SVG}</button>
+    <button class="btn speak" type="button" title="${chrome.i18n.getMessage('speakLabel')}" aria-label="${chrome.i18n.getMessage('speakLabel')}">${SPEAKER_SVG}</button>
     <span class="word"></span>
     <span class="phons"></span>
-    <button class="btn close" type="button" title="关闭" aria-label="关闭">${CLOSE_SVG}</button>
+    <button class="btn close" type="button" title="${chrome.i18n.getMessage('closeLabel')}" aria-label="${chrome.i18n.getMessage('closeLabel')}">${CLOSE_SVG}</button>
   </div>
   <div class="body" hidden>
     <div class="defs"></div>

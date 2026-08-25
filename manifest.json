@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "EchoWord",
+  "name": "__MSG_extName__",
   "version": "0.3.0",
-  "description": "悬停英文单词即弹出卡片，展示音标、释义与例句，并通过发音在句子的语感中学会单词。",
+  "default_locale": "zh_CN",
+  "description": "__MSG_extDescription__",
   "permissions": [
     "tts",
     "storage",
@@ -23,7 +24,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "EchoWord",
+    "default_title": "__MSG_extName__",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
