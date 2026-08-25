@@ -1,4 +1,4 @@
-// echo word — 悬停单词即弹出小卡片并朗读（已移除原来的「选中即朗读」）。
+// EchoWord — 悬停单词即弹出小卡片并朗读（已移除原来的「选中即朗读」）。
 //
 // 行为：
 // - 按「弹窗触发方式」（popupMode）决定如何弹出卡片（Shadow DOM）：
@@ -73,7 +73,7 @@ const HOSTNAME = (location.hostname || '').toLowerCase();
 // ---------- 弹窗宿主与 Shadow DOM ----------
 
 const host = document.createElement('div');
-host.setAttribute('data-echo-word', '');
+host.setAttribute('data-echoword', '');
 // 内联样式统一加 !important，尽量抵抗页面样式对宿主的干扰。
 const setHost = (prop, value) => host.style.setProperty(prop, value, 'important');
 setHost('position', 'absolute');
