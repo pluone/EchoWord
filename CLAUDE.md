@@ -6,13 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-echo word —— Chrome 扩展（Manifest V3）：悬停/点击英文单词弹出卡片（音标、必应词典释义、整句中文翻译），并用系统 TTS 朗读。纯静态扩展，无构建、无测试、无 npm。
+EchoWord —— Chrome 扩展（Manifest V3）：悬停/点击英文单词弹出卡片（音标、必应词典释义、整句中文翻译），并用系统 TTS 朗读。纯静态扩展，无构建、无测试、无 npm。
 
 ## 常用命令
 
 - 语法检查（改动后必做）：`node --check content.js background.js options.js popup.js offscreen.js`
 - 加载/刷新：`chrome://extensions` → 开发者模式 → 「加载已解压的扩展程序」选项目根目录；改完 JS/HTML 点扩展卡片的刷新按钮，再刷新页面让 content script 重新注入
-- 打包发布（可选）：`zip -r echo-word-<version>.zip . -x "*.git*" ".claude/*" "docs/*"`
+- 打包发布（可选）：`bash package.sh`
 
 ## 架构（需跨文件理解的部分）
 
