@@ -6,3 +6,4 @@
 
 # Chrome 扩展打包产物
 *.zip
+.workbuddy/
