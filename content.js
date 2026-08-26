@@ -60,6 +60,9 @@ const HAS_ALNUM = /[A-Za-z0-9]/;
 // 只要光标落在单词包围盒外这个距离以内，仍视为悬停在单词上。
 const POINT_TOLERANCE = 6; // px
 
+// 三角半宽（12px 宽的一半）：clamp 边界，保证整枚三角不出弹窗底边。
+const ARROW_HALF = 6; // px
+
 let cfg = { ...DEFAULT_OPTIONS };
 let currentWord = null; // { word, node, start, end }
 let activeSentence = null; // 当前弹窗对应的句子，用于丢弃过期的整句翻译
@@ -112,11 +115,11 @@ shadow.innerHTML = `
     max-width: min(60vw, 420px);
     box-sizing: border-box;
   }
-  /* 底边中央的向下小尖角，指向下方的单词。 */
+  /* 底边的向下小尖角，指向单词盒中心（--arrow-x 由 JS 按单词位置喂入，clamp 在弹窗内）。 */
   .popup::after {
     content: '';
     position: absolute;
-    left: 50%;
+    left: var(--arrow-x, 50%);
     bottom: -6px;
     transform: translateX(-50%);
     border-left: 6px solid transparent;
@@ -725,6 +728,11 @@ function positionPopup(info) {
   const cx = wr.left + scrollX + wr.width / 2; // 单词水平中心（页面坐标）
   let left = cx - w / 2;
   left = Math.max(pad + scrollX, Math.min(left, scrollX + window.innerWidth - w - pad));
+
+  // 尖角水平位置指向单词中心（弹窗内局部 x），钳制在弹窗底边内侧，
+  // 贴边时弹窗被视口钳制偏移，仍能对准单词而非黏在弹窗正中。
+  const arrowX = Math.max(ARROW_HALF, Math.min(cx - left, w - ARROW_HALF));
+  popupEl.style.setProperty('--arrow-x', arrowX + 'px');
 
   // 优先放在单词正上方；上方视口空间不足时翻转到单词下方。
   const above = wr.top - h - gap >= pad;
