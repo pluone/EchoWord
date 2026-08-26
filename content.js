@@ -133,6 +133,19 @@ shadow.innerHTML = `
     border-top: none;
     border-bottom: 6px solid #fff;
   }
+  /* 弹窗底边外的 6px 全宽透明接驳带（与尖角同深）：把整条边扩成可悬停带，
+     命中后经 shadow 重定向为 host → clearHide，途中不落页面/其它单词上。 */
+  .catch {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -6px;
+    height: 6px;
+  }
+  .popup.below .catch {
+    bottom: auto;
+    top: -6px;
+  }
   .head {
     display: flex;
     align-items: center;
@@ -207,6 +220,7 @@ shadow.innerHTML = `
     <div class="defs"></div>
     <div class="trans" hidden></div>
   </div>
+  <span class="catch"></span>
 </div>
 `;
 
