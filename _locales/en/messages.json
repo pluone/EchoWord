@@ -1,14 +1,15 @@
 {
   "extName": {
-    "message": "TTS Read Word",
+    "message": "EchoWord",
     "description": "Extension name"
   },
   "extDescription": {
     "message": "Hover over an English word to pop up a card with phonetics, definitions and a sentence translation — learn words through the rhythm of sentences with TTS pronunciation.",
     "description": "Extension description (shown on the Web Store and in chrome://extensions)"
   },
+
   "optionsTitle": {
-    "message": "TTS Read Word Settings",
+    "message": "EchoWord Settings",
     "description": "Options page title"
   },
   "loadVoiceLabel": {
@@ -183,6 +184,7 @@
     "message": "▶ Play",
     "description": "Custom preview play button"
   },
+
   "autoVoice": {
     "message": "Automatic (default)",
     "description": "Automatic option in the voice dropdown"
@@ -215,6 +217,7 @@
     "message": "Failed to load voices: $1",
     "description": "Error loading voices, $1 is the error message"
   },
+
   "tabCurrent": {
     "message": "Current site",
     "description": "Popup tab: current site"
@@ -263,6 +266,7 @@
     "message": "Content scripts cannot be injected into this page, so it can't be enabled or disabled here.",
     "description": "Hint on pages where content scripts can't be injected"
   },
+
   "speakLabel": {
     "message": "Read aloud",
     "description": "Read-aloud button title in the popup card"

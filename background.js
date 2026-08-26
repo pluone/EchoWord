@@ -1,4 +1,4 @@
-// TTS Read Word — 后台服务：用 chrome.tts 朗读 content script 传来的文字。
+// EchoWord — 后台服务：用 chrome.tts 朗读 content script 传来的文字。
 
 const DEFAULT_LANG = 'en-US';
 const DEFAULT_OPTIONS = { voiceName: '', volume: 100, rate: 1 };
@@ -121,16 +121,16 @@ function speakWordThenSentence(word, sentence, gap) {
 function debugVoices() {
   getEnglishVoices().then((enVoices) => {
     if (!enVoices.length) {
-      console.log('[TTS Read Word] 未找到英文语音，请检查系统是否安装了英文 TTS 语音。');
+      console.log('[EchoWord] 未找到英文语音，请检查系统是否安装了英文 TTS 语音。');
       return;
     }
     const defaultVoice = enVoices.find((v) => !v.remote) || enVoices[0];
-    console.log(`[TTS Read Word] 英文(en)语音共 ${enVoices.length} 个：`);
+    console.log(`[EchoWord] 英文(en)语音共 ${enVoices.length} 个：`);
     enVoices.forEach((v, i) => {
       console.log(`  ${i}. name="${v.voiceName}" lang="${v.lang}" remote=${v.remote}`);
     });
     console.log(
-      `[TTS Read Word] 默认英文(${DEFAULT_LANG})语音 → "${defaultVoice.voiceName}" (remote=${defaultVoice.remote})`
+      `[EchoWord] 默认英文(${DEFAULT_LANG})语音 → "${defaultVoice.voiceName}" (remote=${defaultVoice.remote})`
     );
   });
 }
