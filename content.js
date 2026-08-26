@@ -10,7 +10,7 @@
 
 const DEFAULT_OPTIONS = {
   hoverDelay: 600, // 毫秒；0 表示立即
-  autoSpeak: false,
+  autoSpeak: true, // 默认「弹窗出现后自动播放发音」
   // 朗读模式：'word' 只朗读单词 | 'sentence' 只朗读整句 |
   // 'word_sentence' 先朗读单词，再朗读整句（见 speakFor）。
   speakMode: 'word',

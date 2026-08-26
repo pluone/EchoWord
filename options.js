@@ -33,7 +33,7 @@ const DEFAULTS = {
   volume: 100,
   rate: 1,
   hoverDelay: 600,
-  autoSpeak: false,
+  autoSpeak: true, // 默认「弹窗出现后自动播放发音」
   speakMode: 'word', // 'word' 单词 | 'sentence' 整句 | 'word_sentence' 先单词后整句
   sentenceBreak: 'period', // 朗读整句断句：'period' 句号（默认）| 'comma' 逗号
   stickyPopup: false,
