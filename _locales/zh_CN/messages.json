@@ -1,15 +1,14 @@
 {
   "extName": {
-    "message": "EchoWord",
+    "message": "TTS Read Word",
     "description": "扩展名称"
   },
   "extDescription": {
     "message": "悬停英文单词即弹出卡片，展示音标、释义与例句，并通过发音在句子的语感中学会单词。",
     "description": "扩展描述"
   },
-
   "optionsTitle": {
-    "message": "EchoWord 设置",
+    "message": "TTS Read Word 设置",
     "description": "设置页标题"
   },
   "loadVoiceLabel": {
@@ -184,7 +183,6 @@
     "message": "▶ 播放",
     "description": "自定义试听播放按钮"
   },
-
   "autoVoice": {
     "message": "自动（默认）",
     "description": "语音下拉框自动选项"
@@ -217,7 +215,6 @@
     "message": "加载语音失败：$1",
     "description": "加载语音失败提示，$1 为错误信息"
   },
-
   "tabCurrent": {
     "message": "当前站点",
     "description": "popup 当前站点标签页"
@@ -266,7 +263,6 @@
     "message": "此页面不支持注入脚本，无法在此启用或禁用。",
     "description": "无法注入脚本的页面提示"
   },
-
   "speakLabel": {
     "message": "朗读",
     "description": "弹窗卡片朗读按钮标题"

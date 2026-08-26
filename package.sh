@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 VERSION="${1:-$(node -e "console.log(require('./manifest.json').version)")}"
 
 OUTDIR="dist"
-OUTFILE="${OUTDIR}/EchoWord-${VERSION}.zip"
+OUTFILE="${OUTDIR}/TTSReadWord-${VERSION}.zip"
 
 # 排除：打包脚本自身、git、文档、项目说明、Claude/编辑器配置、workbuddy、截图、DS_Store、dist 自身
 EXCLUDE=(

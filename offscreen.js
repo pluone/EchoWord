@@ -1,4 +1,4 @@
-// EchoWord — 离屏文档：解析必应词典返回的 HTML。
+// TTS Read Word — 离屏文档：解析必应词典返回的 HTML。
 //
 // MV3 service worker 没有 DOMParser，抓到的必应词典页面（clientsearch 布局）
 // 由 background.js 发消息到这里，用真正的 DOMParser 解析。
@@ -61,7 +61,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
       sendResponse({ data: parseDictHtml(message.html) });
     } catch (e) {
-      console.error('[EchoWord] offscreen parse error:', e);
+      console.error('[TTS Read Word] offscreen parse error:', e);
       sendResponse({ data: null, error: String(e) });
     }
   }
