@@ -63,6 +63,12 @@ const POINT_TOLERANCE = 6; // px
 // 三角半宽（12px 宽的一半）：clamp 边界，保证整枚三角不出弹窗底边。
 const ARROW_HALF = 6; // px
 
+// 弹窗宽度约束：弹窗必须始终比标题行（对讲按钮 + 单词 + 音标 + 关闭按钮）宽出余量。
+// 标题行内容全是单行不换行，弹窗窄了就溢出卡片、挤掉关闭按钮。
+const POPUP_CHROME_X = 26; // .popup 左右 padding(12*2) + 边框(1*2)：内容宽换算到总宽的开销
+const TITLE_MARGIN = 8; // 弹窗比标题行额外宽出的余量
+const POPUP_MAX_WIDTH = () => Math.min(window.innerWidth * 0.6, 420); // 与 CSS max-width: min(60vw, 420px) 对齐
+
 let cfg = { ...DEFAULT_OPTIONS };
 let currentWord = null; // { word, node, start, end }
 let activeSentence = null; // 当前弹窗对应的句子，用于丢弃过期的整句翻译
@@ -109,8 +115,9 @@ shadow.innerHTML = `
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 14px;
     line-height: 1.35;
-    /* 宽度先按内容自适应（fit-content），首次内容加载后由 JS 冻结为固定像素；
-       此后释义/翻译继续加载只在纵向扩展，不再改变宽度。 */
+    /* 宽度先按内容自适应（fit-content），首次内容加载后由 JS 固化为像素；
+       固化的宽度始终不小于标题行（见 ensurePopupWidth），此后正文继续加载只在
+       纵向扩展，不再改变宽度。 */
     width: fit-content;
     max-width: min(60vw, 420px);
     box-sizing: border-box;
@@ -156,6 +163,10 @@ shadow.innerHTML = `
     font-weight: 600;
     white-space: nowrap;
     flex: 1 1 auto;
+    /* 单词可给音标/按钮让位：弹窗已到最大宽度、标题行仍放不下时，单词截断成省略号不外溢。 */
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .phons {
     color: #333;
@@ -163,6 +174,7 @@ shadow.innerHTML = `
     font-weight: 600;
     white-space: nowrap;
     margin-left: auto; /* 音标靠右 */
+    flex: none; /* 音标不被压缩，放不下的宽度由单词省略号承担 */
   }
   .phons .vowel { color: #c0392b; } /* 元音红色 */
   .btn {
@@ -232,6 +244,7 @@ const transEl = shadow.querySelector('.trans');
 const speakBtn = shadow.querySelector('.speak');
 const closeBtn = shadow.querySelector('.close');
 const popupEl = shadow.querySelector('.popup');
+const headEl = shadow.querySelector('.head');
 
 (document.documentElement || document.body).appendChild(host);
 
@@ -580,12 +593,31 @@ function renderPopup(word) {
   popupEl.style.width = '';
 }
 
-// 把当前弹窗宽度固化为像素值。宽度在首次内容（音标/释义或译文）加载后确定，
-// 之后保持冻结，后续内容只在纵向扩展，避免弹窗来回变宽、位置跳动。
-function lockPopupWidth() {
-  if (widthLocked) return;
+// 标题行（对讲按钮 + 单词 + 音标 + 关闭按钮）全是单行不换行内容，测量其自然宽度：
+// 临时让标题行按 max-content 排布（可溢出弹窗），读其内容宽后立即还原。
+function titleNeedWidth() {
+  const prevMinWidth = headEl.style.minWidth;
+  headEl.style.minWidth = 'max-content';
+  const w = headEl.getBoundingClientRect().width;
+  headEl.style.minWidth = prevMinWidth;
+  return w;
+}
+
+// 确定/维护弹窗宽度：弹窗必须比标题行宽出 TITLE_MARGIN 余量，标题行才不外溢、
+// 关闭按钮不贴边。宽度在首次内容（音标/释义或译文）加载后确定并固化为像素；
+// 之后保持冻结，仅在标题行变宽（如音标迟于译文返回）时单向扩大，
+// 正文即使更宽也只纵向扩展，避免弹窗来回变宽、位置跳动。
+function ensurePopupWidth() {
+  const want = Math.max(popupEl.offsetWidth, titleNeedWidth() + POPUP_CHROME_X + TITLE_MARGIN);
+  const clamped = Math.min(want, POPUP_MAX_WIDTH());
+  if (widthLocked) {
+    if (clamped <= popupEl.offsetWidth) return;
+    popupEl.style.width = clamped + 'px';
+    positionPopup(currentWord); // 宽度变化会改变相对单词的水平居中，需重新定位
+    return;
+  }
   widthLocked = true;
-  popupEl.style.width = popupEl.offsetWidth + 'px';
+  popupEl.style.width = clamped + 'px';
 }
 
 // ---------- 词典释义 ----------
@@ -644,7 +676,7 @@ function renderDict(data) {
   }
 
   updateBodyVisibility();
-  lockPopupWidth();
+  ensurePopupWidth();
 }
 
 // 把音标渲染为「/音标/」：元音用红色 span，辅音及重音符号保持默认颜色。
@@ -703,7 +735,7 @@ function renderTranslation(trans) {
   transEl.textContent = trans;
   transEl.hidden = false;
   updateBodyVisibility();
-  lockPopupWidth();
+  ensurePopupWidth();
 }
 
 // phons / defs / trans 任一有内容即显示 .body，内容变化后重新定位弹窗。
