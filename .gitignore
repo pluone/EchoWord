@@ -8,3 +8,7 @@
 *.zip
 dist/
 .workbuddy/
+
+# WXT 构建产物 / 依赖
+node_modules/
+.wxt/

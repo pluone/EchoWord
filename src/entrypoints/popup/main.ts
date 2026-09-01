@@ -1,3 +1,4 @@
+import './popup.css';
 // EchoWord — 工具栏弹窗：两个 tab。「当前站点」控制当前网站单独开关，
 // 「全部网站」是全局总开关（默认开启时全部网站默认启用，默认关闭时全部
 // 网站默认停用）。
@@ -7,25 +8,25 @@
 // - siteMode === 'whitelist'（= 全局关闭）：siteEnabled 存启用站点。
 // content script 监听这三个键实现实时切换。具体模式名对用户不可见。
 
-const tabButtons = document.querySelectorAll('.tab-btn');
-const panels = document.querySelectorAll('.tab-panel');
-const siteEl = document.getElementById('site');
-const siteDesc = document.getElementById('siteDesc');
-const enabledInput = document.getElementById('enabled');
-const globalInput = document.getElementById('global');
-const allDesc = document.getElementById('allDesc');
-const hintEl = document.getElementById('hint');
-const openOptionsBtn = document.getElementById('openOptions');
+const tabButtons = document.querySelectorAll<HTMLElement>('.tab-btn');
+const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
+const siteEl = document.getElementById('site') as HTMLElement;
+const siteDesc = document.getElementById('siteDesc') as HTMLElement;
+const enabledInput = document.getElementById('enabled') as HTMLInputElement;
+const globalInput = document.getElementById('global') as HTMLInputElement;
+const allDesc = document.getElementById('allDesc') as HTMLElement;
+const hintEl = document.getElementById('hint') as HTMLElement;
+const openOptionsBtn = document.getElementById('openOptions') as HTMLButtonElement;
 
 let host = '';
 
 // 把 HTML 里 data-i18n 标记的文本 / 属性替换为当前语言的字符串。
 // 扩展 HTML 文件不做 __MSG_ 原生替换，统一在这里用 chrome.i18n.getMessage() 填充。
 function localize() {
-  document.querySelectorAll('[data-i18n]').forEach((el) => {
+  document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((el) => {
     el.textContent = chrome.i18n.getMessage(el.dataset.i18n);
   });
-  document.querySelectorAll('[data-i18n-aria-label]').forEach((el) => {
+  document.querySelectorAll<HTMLElement>('[data-i18n-aria-label]').forEach((el) => {
     el.setAttribute('aria-label', chrome.i18n.getMessage(el.dataset.i18nAriaLabel));
   });
 }
@@ -44,11 +45,11 @@ function parseTarget(url) {
 
 async function readState() {
   const { siteMode = 'blacklist', siteDisabled = [], siteEnabled = [] } =
-    await chrome.storage.local.get({
+    (await chrome.storage.local.get({
       siteMode: 'blacklist',
       siteDisabled: [],
       siteEnabled: [],
-    });
+    })) as { siteMode: string; siteDisabled: string[]; siteEnabled: string[] };
   return {
     // 全局是否开启：blacklist = 开启（默认全部启用）；whitelist = 关闭。
     global: siteMode !== 'whitelist',
@@ -71,7 +72,9 @@ async function setGlobal(on) {
 
 async function setSite(siteMode, host, on) {
   const key = siteMode === 'whitelist' ? 'siteEnabled' : 'siteDisabled';
-  const { [key]: list = [] } = await chrome.storage.local.get({ [key]: [] });
+  const { [key]: list = [] } = (await chrome.storage.local.get({
+    [key]: [],
+  })) as { [k: string]: string[] };
   const set = new Set(list.map((h) => String(h).toLowerCase()));
   if (on) set.add(host);
   else set.delete(host);
@@ -115,7 +118,9 @@ for (const btn of tabButtons) {
 }
 
 enabledInput.addEventListener('change', async () => {
-  const { siteMode = 'blacklist' } = await chrome.storage.local.get({ siteMode: 'blacklist' });
+  const { siteMode = 'blacklist' } = (await chrome.storage.local.get({
+    siteMode: 'blacklist',
+  })) as { siteMode: string };
   await setSite(siteMode, host, enabledInput.checked);
 });
 

@@ -1,32 +1,33 @@
-const voiceSelect = document.getElementById('voice');
-const voiceHint = document.getElementById('voiceHint');
-const excludeButton = document.getElementById('exclude');
-const previewButton = document.getElementById('preview');
-const sampleText = document.getElementById('sampleText');
-const excludedList = document.getElementById('excludedList');
-const excludedHint = document.getElementById('excludedHint');
-const excludedToggle = document.getElementById('excludedToggle');
-const excludedBody = document.getElementById('excludedBody');
-const excludedCount = document.getElementById('excludedCount');
-const volumeInput = document.getElementById('volume');
-const volumeValue = document.getElementById('volumeValue');
-const rateInput = document.getElementById('rate');
-const rateValue = document.getElementById('rateValue');
-const volumeTicks = document.getElementById('volumeTicks');
-const rateTicks = document.getElementById('rateTicks');
-const previewText = document.getElementById('previewText');
-const previewCustom = document.getElementById('previewCustom');
-const hoverDelayRadios = document.querySelectorAll('input[name="hoverDelay"]');
-const autoSpeakInput = document.getElementById('autoSpeak');
-const sentenceSpeakInput = document.getElementById('sentenceSpeak');
-const sentenceBreakRadios = document.querySelectorAll('input[name="sentenceBreak"]');
-const wordFirstInput = document.getElementById('wordFirst');
-const wordFirstRow = document.getElementById('wordFirstRow');
-const stickyPopupInput = document.getElementById('stickyPopup');
-const translatorRadios = document.querySelectorAll('input[name="translator"]');
-const phoneticsRadios = document.querySelectorAll('input[name="phonetics"]');
-const popupModeMac = document.getElementById('popupModeMac');
-const popupModeWindows = document.getElementById('popupModeWindows');
+import './options.css';
+const voiceSelect = document.getElementById('voice') as HTMLSelectElement;
+const voiceHint = document.getElementById('voiceHint') as HTMLElement;
+const excludeButton = document.getElementById('exclude') as HTMLButtonElement;
+const previewButton = document.getElementById('preview') as HTMLButtonElement;
+const sampleText = document.getElementById('sampleText') as HTMLElement;
+const excludedList = document.getElementById('excludedList') as HTMLElement;
+const excludedHint = document.getElementById('excludedHint') as HTMLElement;
+const excludedToggle = document.getElementById('excludedToggle') as HTMLButtonElement;
+const excludedBody = document.getElementById('excludedBody') as HTMLElement;
+const excludedCount = document.getElementById('excludedCount') as HTMLElement;
+const volumeInput = document.getElementById('volume') as HTMLInputElement;
+const volumeValue = document.getElementById('volumeValue') as HTMLElement;
+const rateInput = document.getElementById('rate') as HTMLInputElement;
+const rateValue = document.getElementById('rateValue') as HTMLElement;
+const volumeTicks = document.getElementById('volumeTicks') as HTMLElement;
+const rateTicks = document.getElementById('rateTicks') as HTMLElement;
+const previewText = document.getElementById('previewText') as HTMLTextAreaElement;
+const previewCustom = document.getElementById('previewCustom') as HTMLButtonElement;
+const hoverDelayRadios = document.querySelectorAll<HTMLInputElement>('input[name="hoverDelay"]');
+const autoSpeakInput = document.getElementById('autoSpeak') as HTMLInputElement;
+const sentenceSpeakInput = document.getElementById('sentenceSpeak') as HTMLInputElement;
+const sentenceBreakRadios = document.querySelectorAll<HTMLInputElement>('input[name="sentenceBreak"]');
+const wordFirstInput = document.getElementById('wordFirst') as HTMLInputElement;
+const wordFirstRow = document.getElementById('wordFirstRow') as HTMLElement;
+const stickyPopupInput = document.getElementById('stickyPopup') as HTMLInputElement;
+const translatorRadios = document.querySelectorAll<HTMLInputElement>('input[name="translator"]');
+const phoneticsRadios = document.querySelectorAll<HTMLInputElement>('input[name="phonetics"]');
+const popupModeMac = document.getElementById('popupModeMac') as HTMLElement;
+const popupModeWindows = document.getElementById('popupModeWindows') as HTMLElement;
 
 const DEFAULTS = {
   voiceName: '',
@@ -42,10 +43,14 @@ const DEFAULTS = {
   popupMode: 'hover_click', // 弹窗触发方式，见 options.html 的 Pop-up mode 分组
 };
 
+// 存储里的设置，可能还残留旧版 sentenceSpeak 布尔，随读随迁移。
+type StoredSettings = typeof DEFAULTS & { sentenceSpeak?: boolean };
+
 // 操作系统类型：macOS 与 Windows 可选的弹窗触发方式不同（见 popupModeMac / popupModeWindows）。
 const OS = (() => {
+  const nav = navigator as typeof navigator & { userAgentData?: { platform?: string } };
   const p =
-    (navigator.userAgentData && navigator.userAgentData.platform) ||
+    (nav.userAgentData && nav.userAgentData.platform) ||
     navigator.platform ||
     '';
   return /mac/i.test(p) ? 'mac' : /win/i.test(p) ? 'windows' : 'other';
@@ -54,16 +59,16 @@ const OS = (() => {
 // 把 HTML 里 data-i18n 标记的文本 / 属性替换为当前语言的字符串。
 // 扩展 HTML 文件不做 __MSG_ 原生替换，统一在这里用 chrome.i18n.getMessage() 填充。
 function localize() {
-  document.querySelectorAll('[data-i18n]').forEach((el) => {
+  document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((el) => {
     el.textContent = chrome.i18n.getMessage(el.dataset.i18n);
   });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+  document.querySelectorAll<HTMLTextAreaElement>('[data-i18n-placeholder]').forEach((el) => {
     el.placeholder = chrome.i18n.getMessage(el.dataset.i18nPlaceholder);
   });
-  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+  document.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach((el) => {
     el.title = chrome.i18n.getMessage(el.dataset.i18nTitle);
   });
-  document.querySelectorAll('[data-i18n-aria-label]').forEach((el) => {
+  document.querySelectorAll<HTMLElement>('[data-i18n-aria-label]').forEach((el) => {
     el.setAttribute('aria-label', chrome.i18n.getMessage(el.dataset.i18nAriaLabel));
   });
 }
@@ -97,11 +102,13 @@ function renderTicks(container, min, max, step, format) {
 // 渲染朗读声音下拉框 + 已剔除声音列表。
 async function refreshVoices() {
   try {
-    const { voices } = await chrome.runtime.sendMessage({ type: 'getVoices' });
-    const { excludedVoices, voiceName } = await chrome.storage.local.get({
+    const { voices } = (await chrome.runtime.sendMessage({ type: 'getVoices' })) as {
+      voices: Array<{ voiceName: string; remote?: boolean; lang?: string }>;
+    };
+    const { excludedVoices, voiceName } = (await chrome.storage.local.get({
       excludedVoices: [],
       voiceName: '',
-    });
+    })) as { excludedVoices: string[]; voiceName: string };
     const excludedSet = new Set(excludedVoices);
     const available = new Set(voices.map((v) => v.voiceName));
 
@@ -192,10 +199,10 @@ async function excludeVoice(name) {
   const idx = voiceNames.indexOf(name);
   const nextVoice = idx !== -1 ? voiceNames[(idx + 1) % voiceNames.length] : '';
 
-  const { excludedVoices, voiceName } = await chrome.storage.local.get({
+  const { excludedVoices, voiceName } = (await chrome.storage.local.get({
     excludedVoices: [],
     voiceName: '',
-  });
+  })) as { excludedVoices: string[]; voiceName: string };
   if (!excludedVoices.includes(name)) {
     await chrome.storage.local.set({
       excludedVoices: [...excludedVoices, name],
@@ -210,9 +217,9 @@ async function excludeVoice(name) {
 
 // 把某个声音从已剔除名单移除，恢复到正常列表。
 async function restoreVoice(name) {
-  const { excludedVoices } = await chrome.storage.local.get({
+  const { excludedVoices } = (await chrome.storage.local.get({
     excludedVoices: [],
-  });
+  })) as { excludedVoices: string[] };
   await chrome.storage.local.set({
     excludedVoices: excludedVoices.filter((n) => n !== name),
   });
@@ -220,15 +227,15 @@ async function restoreVoice(name) {
 }
 
 async function loadVolumeRate() {
-  const cfg = await chrome.storage.local.get(DEFAULTS);
-  volumeInput.value = cfg.volume;
+  const cfg = (await chrome.storage.local.get(DEFAULTS)) as StoredSettings;
+  volumeInput.value = String(cfg.volume);
   volumeValue.textContent = cfg.volume + '%';
-  rateInput.value = cfg.rate;
+  rateInput.value = String(cfg.rate);
   rateValue.textContent = Number(cfg.rate).toFixed(1) + '×';
 }
 
 async function loadHoverOptions() {
-  const cfg = await chrome.storage.local.get(DEFAULTS);
+  const cfg = (await chrome.storage.local.get(DEFAULTS)) as StoredSettings;
   // 旧版可选的立即 / 0.1 秒已移除，存储仍为这些值时回退到默认，避免单选框组无选中项。
   const delayValues = new Set(Array.from(hoverDelayRadios, (r) => r.value));
   const delay = delayValues.has(String(cfg.hoverDelay))
@@ -260,7 +267,7 @@ async function loadHoverOptions() {
   const isMac = OS === 'mac';
   popupModeMac.hidden = !isMac;
   popupModeWindows.hidden = isMac;
-  const modeRadios = (isMac ? popupModeMac : popupModeWindows).querySelectorAll(
+  const modeRadios = (isMac ? popupModeMac : popupModeWindows).querySelectorAll<HTMLInputElement>(
     'input[name="popupMode"]'
   );
   const valid = new Set(Array.from(modeRadios, (r) => r.value));
@@ -380,7 +387,9 @@ for (const radio of sentenceBreakRadios) {
 }
 
 // 两个系统分组共用 name="popupMode"，任一被选中即保存。
-for (const radio of document.querySelectorAll('input[name="popupMode"]')) {
+for (const radio of document.querySelectorAll<HTMLInputElement>(
+  'input[name="popupMode"]'
+)) {
   radio.addEventListener('change', () => {
     if (radio.checked) {
       chrome.storage.local.set({ popupMode: radio.value });

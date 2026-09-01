@@ -1,7 +1,19 @@
+export default defineBackground(() => {
 // EchoWord — 后台服务：用 chrome.tts 朗读 content script 传来的文字。
 
 const DEFAULT_LANG = 'en-US';
 const DEFAULT_OPTIONS = { voiceName: '', volume: 100, rate: 1 };
+
+type SpeakConfig = { voiceName: string; volume: number; rate: number };
+type SpeakOptions = {
+  lang?: string;
+  voiceName?: string;
+  volume?: number;
+  rate?: number;
+  enqueue?: boolean;
+  onEvent?: (event: { type: string }) => void;
+};
+type VoiceInfo = { voiceName: string; lang: string; remote: boolean };
 
 function isEnglishVoice(lang) {
   const l = (lang || '').toLowerCase();
@@ -41,7 +53,7 @@ const ELOQUENCE_VOICE_NAMES = new Set([
 
 // 获取所有英文语音（本地在前、远程在后，各自按名称排序）。
 function getEnglishVoices() {
-  return new Promise((resolve) => {
+  return new Promise<VoiceInfo[]>((resolve) => {
     chrome.tts.getVoices((voices) => {
       const enVoices = (voices || [])
         .filter((v) => isEnglishVoice(v.lang))
@@ -64,8 +76,8 @@ function getEnglishVoices() {
 // 朗读：应用用户配置的语音 / 音量 / 速度。
 // voiceNameOverride 存在时优先使用它（如试听某个指定的声音）。
 function speakText(text, voiceNameOverride) {
-  chrome.storage.local.get(DEFAULT_OPTIONS, (cfg) => {
-    const options = {
+  chrome.storage.local.get(DEFAULT_OPTIONS, (cfg: SpeakConfig) => {
+    const options: SpeakOptions = {
       lang: DEFAULT_LANG,
       enqueue: false,
       // chrome.tts 的 volume 上限为 1.0，故把 0–200% 钳制到 0–100%。
@@ -94,8 +106,8 @@ function cancelSequence() {
 function speakWordThenSentence(word, sentence, gap) {
   cancelSequence();
   if (!word) return;
-  chrome.storage.local.get(DEFAULT_OPTIONS, (cfg) => {
-    const base = {
+  chrome.storage.local.get(DEFAULT_OPTIONS, (cfg: SpeakConfig) => {
+    const base: SpeakOptions = {
       lang: DEFAULT_LANG,
       enqueue: false,
       volume: Math.min(Math.max(cfg.volume, 0), 100) / 100,
@@ -113,7 +125,7 @@ function speakWordThenSentence(word, sentence, gap) {
           chrome.tts.speak(sentence, { ...base });
         }, gap);
       },
-    });
+    } as SpeakOptions);
   });
 }
 
@@ -158,11 +170,11 @@ async function ensureDictCache() {
   if (dictCacheLoaded) return;
   dictCacheLoaded = true;
   try {
-    const { [DICT_CACHE_KEY]: stored } = await chrome.storage.local.get({
+    const { [DICT_CACHE_KEY]: stored } = (await chrome.storage.local.get({
       [DICT_CACHE_KEY]: {},
-    });
+    })) as { [key: string]: { data?: unknown; ts?: number } | undefined };
     for (const [word, entry] of Object.entries(stored || {})) {
-      if (entry && entry.data) dictCache.set(word, entry);
+      if (entry && (entry as { data?: unknown }).data) dictCache.set(word, entry);
     }
   } catch (e) {
     // 读取失败仅影响预热，后续仍可用内存缓存。
@@ -186,13 +198,11 @@ async function persistDictCache() {
 // 确保离屏文档存在。service worker 空闲被回收后离屏文档可能随之关闭，
 // 因此每次解析前都检查一次，缺失则重建。
 async function ensureOffscreen() {
-  // 新版 Chrome 用 hasDocument()，旧版用 getDocuments()（旧版已被移除）。
-  const exists = chrome.offscreen.hasDocument
-    ? await chrome.offscreen.hasDocument()
-    : (await chrome.offscreen.getDocuments()).length > 0;
+  // 新版 Chrome 用 hasDocument()（旧版 getDocuments() 已从 Chrome 移除）。
+  const exists = await chrome.offscreen.hasDocument();
   if (exists) return;
   await chrome.offscreen.createDocument({
-    url: 'offscreen.html',
+    url: chrome.runtime.getURL('/offscreen.html'),
     reasons: ['DOM_PARSER'],
     justification: '在离屏文档中用 DOMParser 解析必应词典返回的 HTML（MV3 service worker 无 DOMParser）',
   });
@@ -201,10 +211,10 @@ async function ensureOffscreen() {
 // 把 HTML 交给离屏文档解析，返回 { us, uk, defs, examples } 或 null。
 // 消息通道连不上（离屏文档刚被回收）时，关闭残留文档重建并重试一次。
 async function parseDictInOffscreen(html) {
-  const trySend = () =>
+  const trySend = (): Promise<{ ok: boolean; res?: any }> =>
     chrome.runtime
       .sendMessage({ type: 'parseDictHtml', html })
-      .then((res) => ({ ok: true, res }))
+      .then((res: any) => ({ ok: true, res }))
       .catch(() => ({ ok: false }));
 
   await ensureOffscreen();
@@ -424,4 +434,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((e) => sendResponse({ ok: false }));
     return true; // 异步响应，保持消息通道
   }
+});
 });

@@ -1,3 +1,7 @@
+export default defineContentScript({
+  matches: ['<all_urls>'],
+  runAt: 'document_idle',
+  main() {
 // EchoWord — 悬停单词即弹出小卡片并朗读（已移除原来的「选中即朗读」）。
 //
 // 行为：
@@ -236,15 +240,15 @@ shadow.innerHTML = `
 </div>
 `;
 
-const wordEl = shadow.querySelector('.word');
-const phonsEl = shadow.querySelector('.phons');
-const bodyEl = shadow.querySelector('.body');
-const defsEl = shadow.querySelector('.defs');
-const transEl = shadow.querySelector('.trans');
-const speakBtn = shadow.querySelector('.speak');
-const closeBtn = shadow.querySelector('.close');
-const popupEl = shadow.querySelector('.popup');
-const headEl = shadow.querySelector('.head');
+const wordEl = shadow.querySelector<HTMLElement>('.word');
+const phonsEl = shadow.querySelector<HTMLElement>('.phons');
+const bodyEl = shadow.querySelector<HTMLElement>('.body');
+const defsEl = shadow.querySelector<HTMLElement>('.defs');
+const transEl = shadow.querySelector<HTMLElement>('.trans');
+const speakBtn = shadow.querySelector<HTMLElement>('.speak');
+const closeBtn = shadow.querySelector<HTMLElement>('.close');
+const popupEl = shadow.querySelector<HTMLElement>('.popup');
+const headEl = shadow.querySelector<HTMLElement>('.head');
 
 (document.documentElement || document.body).appendChild(host);
 
@@ -1167,4 +1171,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
     if (changes[key]) next[key] = changes[key].newValue;
   }
   if (Object.keys(next).length) applyConfig({ ...cfg, ...next });
+});
+  },
 });
