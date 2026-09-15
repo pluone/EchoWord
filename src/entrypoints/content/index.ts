@@ -101,6 +101,11 @@ const SPEAKER_SVG =
 const CLOSE_SVG =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
   '<path d="M18 6 6 18M6 6l12 12"/></svg>';
+// 收藏星标：同一路径，未收藏时 stroke 描边（outline）、已收藏时 fill 填充（fill），
+// 由 renderSaveState 按状态切换 fill / stroke 属性。
+const STAR_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9-5.3-2.9-5.3 2.9 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>';
 
 const shadow = host.attachShadow({ mode: 'open' });
 shadow.innerHTML = `
@@ -198,6 +203,13 @@ shadow.innerHTML = `
   .btn:hover { background: rgba(0, 0, 0, 0.08); }
   .btn svg { width: 16px; height: 16px; display: block; }
   .close { color: #999; }
+  /* 收藏按钮（星）三态：
+     - 描边：该单词完全未收藏；
+     - 金色填充（.starred）：词条已收藏 且 当前句已收藏 —— 点击取消本句；
+     - 淡金色填充（.part）：词条已收藏但当前句未收藏 —— 点击追加本句，
+       既表示「这个单词已在单词本里」也提示「还能再收一句」。 */
+  .btn.save.starred { color: #f5a623; }
+  .btn.save.part { color: #fbc968; }
   .body {
     display: flex;
     flex-direction: column;
@@ -230,6 +242,7 @@ shadow.innerHTML = `
     <button class="btn speak" type="button" title="${chrome.i18n.getMessage('speakLabel')}" aria-label="${chrome.i18n.getMessage('speakLabel')}">${SPEAKER_SVG}</button>
     <span class="word"></span>
     <span class="phons"></span>
+    <button class="btn save" type="button" title="${chrome.i18n.getMessage('saveWordLabel')}" aria-label="${chrome.i18n.getMessage('saveWordLabel')}">${STAR_SVG}</button>
     <button class="btn close" type="button" title="${chrome.i18n.getMessage('closeLabel')}" aria-label="${chrome.i18n.getMessage('closeLabel')}">${CLOSE_SVG}</button>
   </div>
   <div class="body" hidden>
@@ -247,6 +260,8 @@ const defsEl = shadow.querySelector<HTMLElement>('.defs');
 const transEl = shadow.querySelector<HTMLElement>('.trans');
 const speakBtn = shadow.querySelector<HTMLElement>('.speak');
 const closeBtn = shadow.querySelector<HTMLElement>('.close');
+const saveBtn = shadow.querySelector<HTMLElement>('.save');
+const saveSvg = shadow.querySelector<HTMLElement>('.save svg');
 const popupEl = shadow.querySelector<HTMLElement>('.popup');
 const headEl = shadow.querySelector<HTMLElement>('.head');
 
@@ -736,6 +751,7 @@ function loadTranslation(sentence) {
 
 function renderTranslation(trans) {
   if (!trans) return; // 翻译失败或为空：保持仅显示释义
+  lastTranslation = trans; // 收藏时用作译文快照
   transEl.textContent = trans;
   transEl.hidden = false;
   updateBodyVisibility();
@@ -803,8 +819,13 @@ function showPopup(info) {
   // 翻译用整句：读到句末标点、不做 30 词截取；朗读用的片段与之不同，在 speakFor 里单独提取。
   const sentence = sentenceForTranslation(info);
   activeSentence = sentence;
+  // 同步收藏态所需上下文：例句用于保存、译文缓存在 renderTranslation 更新。
+  savedSentence = sentence;
+  lastTranslation = null;
   loadTranslation(sentence);
   loadDict(info.word);
+  // 异步查询该 (word, page) 是否已收藏：查询未返回前先渲染成未收藏描边星。
+  loadSaveState(info.word);
   if (!cfg.autoSpeak) return;
   // 各朗读模式在 speakFor 内处理（单词 / 整句 / 先单词后整句）。
   speakFor(info);
@@ -1040,6 +1061,276 @@ speakBtn.addEventListener('click', () => {
 });
 
 closeBtn.addEventListener('click', hidePopup);
+
+// ---------- 收藏（单词本） ----------
+//
+// 星标按钮：收藏当前单词与所在例句（整句 + 译文 + 出处 URL）。
+// - 弹窗打开时异步向 background 查询 (word, page) 是否已收藏：查询前先渲染成
+//   未收藏的描边星，晚到的「已收藏」结果再翻为金色填充，不阻塞弹窗出现。
+// - 点击即 toggle：未收藏 → 收藏（保存中禁点）；已收藏 → 取消该来源。
+// - 保存的数据全部来自当前弹窗已缓存的内容（activeSentence / 渲染中的译文，
+//   dict 快照由 background 兜底），不为保存而额外请求词典或翻译。
+
+// 当前弹窗的例句字符串（showPopup 时与 activeSentence 同步设置）。
+let savedSentence = null;
+// 当前弹窗例句的最新译文（renderTranslation 时记录），保存时作为快照直接采用。
+let lastTranslation = null;
+// 当前弹窗星标状态：'off' 词条未收藏 | 'on' 词条与当前句都已收藏 |
+// 'part' 词条已收藏但当前句未收藏（淡金）。影响星标样式与点击行为。
+let savedState = 'off';
+// 保存/移除进行中：期间禁点，防止连点竞争。
+let savePending = false;
+
+const STAR_FILL_OFF = 'none';
+const STAR_FILL_ON = 'currentColor';
+
+// 渲染星标：'off' 描边、'on' 金色填充、'part' 淡金填充（词条已收藏过）。
+function renderSaveState(state) {
+  savedState = state;
+  const filled = state !== 'off';
+  if (saveSvg) saveSvg.setAttribute('fill', filled ? STAR_FILL_ON : STAR_FILL_OFF);
+  // 'part'（词条已收藏但本句未收）与 'on' 的 title 都说明用户点了会发生什么。
+  const label = chrome.i18n.getMessage(
+    state === 'on' ? 'removeWordLabel' :
+    state === 'part' ? 'addSentenceLabel' : 'saveWordLabel'
+  );
+  saveBtn.title = label;
+  saveBtn.setAttribute('aria-label', label);
+  saveBtn.classList.toggle('starred', state === 'on');
+  saveBtn.classList.toggle('part', state === 'part');
+}
+
+// 每次弹窗打开时同步收藏状态（异步，不阻塞渲染）。background 会区分
+// 「词条已收藏」与「当前句已收藏」两个信号，映射为三态星标。
+function loadSaveState(word) {
+  renderSaveState('off');
+  savePending = false;
+  chrome.runtime
+    .sendMessage({ type: 'wordbookCheck', word, url: location.href, sentence: savedSentence || '' })
+    .then((res) => {
+      // 弹窗已切换到别的句子时丢弃过期结果。
+      if (!visible || activeSentence !== savedSentence) return;
+      if (res && res.ok) {
+        const state = res.saved ? 'on' : res.wordSaved ? 'part' : 'off';
+        renderSaveState(state);
+      }
+    })
+    .catch(() => { });
+}
+
+saveBtn.addEventListener('click', () => {
+  if (savePending || !currentWord) return;
+  const word = currentWord.word;
+  const url = location.href;
+  const title = document.title || '';
+  const sentence = savedSentence || word; // 无句可取时退化为单词本身
+  savePending = true;
+  saveBtn.style.opacity = '0.5';
+
+  // 三态围绕当前句 toggle：'on' 移除本句；'off' 新建词条；'part' 给已有词条追加本句。
+  const type = savedState === 'on' ? 'wordbookRemove' : 'wordbookAdd';
+  const payload: Record<string, string> = { type, word, url, sentence };
+  if (savedState !== 'on') {
+    payload.trans = lastTranslation || '';
+    payload.title = title;
+  }
+  chrome.runtime
+    .sendMessage(payload)
+    .then((res) => {
+      // 成功后落到明确状态：收藏 → 'on'，移除 → 词条里是否还有本句以外的句子
+      // 由 background 返回 wordSaved，映射 'part' / 'off'。
+      if (res && res.ok) {
+        renderSaveState(type === 'wordbookAdd' ? 'on' : res.wordSaved ? 'part' : 'off');
+      }
+    })
+    .catch(() => { })
+    .finally(() => {
+      savePending = false;
+      saveBtn.style.opacity = '';
+    });
+});
+
+// ---------- 例句锚点定位（reveal） ----------
+//
+// 从单词本点击出处链接打开原页时，URL 带 ?echoword_reveal=<来源id>：
+// 内容脚本取该来源的例句文本，在页面中定位后滚动居中，并叠加 ~2s 的临时
+// 闪现高亮（覆盖层放在页面 DOM 上，shadow 宿主会被弹窗尺寸裁剪）。
+// 处理完成后清掉 URL 参数（replaceState 不产生历史记录）。
+
+const REVEAL_PARAM = 'echoword_reveal';
+const REVEAL_SCAN_MAX = MAX_BLOCK_TEXT * 4; // 全页扫描字符上限，防大页面卡顿
+const REVEAL_FLASH_MS = 2000;
+
+function runReveal(sid) {
+  if (!sid) return;
+  chrome.runtime
+    .sendMessage({ type: 'wordbookGetSource', sid })
+    .then((res) => {
+      const sentence = res && res.ok && res.data ? res.data.sentence : null;
+      const word = res && res.ok && res.data ? res.data.word : null;
+      if (!sentence) return;
+      // 等一次布局稳定再定位（图片/字体加载会移动文本位置）。
+      const start = () => revealSentence(sentence, word);
+      if (document.readyState === 'complete') setTimeout(start, 300);
+      else window.addEventListener('load', () => setTimeout(start, 300), { once: true });
+    })
+    .catch(() => { });
+}
+
+// 按句中单词构造宽松匹配正则：词与词之间允许任意空白（跨行/跨标签差异）。
+function sentenceRegex(sentence) {
+  const words = sentence.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return null;
+  const parts = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(parts.join('\\s+'), 'i');
+}
+
+// 在页面文本中定位例句（可选：同时定位句中的目标单词）。
+// 按文档顺序累积文本节点、用宽松正则找首处命中，再映射回具体节点偏移。
+function findSentenceOnPage(sentence, word) {
+  const re = sentenceRegex(sentence);
+  if (!re) return null;
+  const segs = []; // { node, start, end } 文本节点段（全文拼接的最小单元）
+  let total = 0;
+
+  const walk = (el: Element) => {
+    if (total >= REVEAL_SCAN_MAX) return;
+    for (const child of Array.from(el.childNodes) as (Node | Element)[]) {
+      if (total >= REVEAL_SCAN_MAX) return;
+      if (child.nodeType === Node.TEXT_NODE) {
+        const text = (child as Text).textContent || '';
+        if (text) {
+          segs.push({ node: child, start: total, end: total + text.length });
+          total += text.length;
+        }
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        const el2 = child as Element;
+        const tag = el2.tagName;
+        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT' || tag === 'TEMPLATE') continue;
+        const style = getComputedStyle(el2);
+        if (style.display === 'none' || style.visibility === 'hidden') continue;
+        walk(el2);
+      }
+    }
+  };
+  if (document.body) walk(document.body);
+
+  const full = segs.map((s) => s.node.textContent).join('');
+  // 宽松正则匹配（允许跨节点空白差异），在累积全文中找首个命中。
+  re.lastIndex = 0;
+  const m = re.exec(full);
+  if (!m) return null;
+
+  const sent = rangeToBoundary(segs, m.index, m.index + m[0].length);
+  if (!sent) return null;
+
+  // 目标单词：在命中片段内按归一化词形精确匹配第 1 处，同样映射回节点。
+  // 单词不含内部空白，不受页/句空白差异影响；映射不到时静默跳过红高亮。
+  let w = null;
+  if (word) {
+    const tw = String(word).toLowerCase().replace(/[’]/g, "'");
+    const wRe = new RegExp(tw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const wm = wRe.exec(full.slice(m.index, m.index + m[0].length));
+    if (wm) {
+      const wSent = rangeToBoundary(segs, m.index + wm.index, m.index + wm.index + wm[0].length);
+      if (wSent) {
+        w = {
+          wStartNode: wSent.startNode,
+          wStartOffset: wSent.startOffset,
+          wEndNode: wSent.endNode,
+          wEndOffset: wSent.endOffset,
+        };
+      }
+    }
+  }
+
+  return { ...sent, ...w };
+}
+
+// 叠加闪现高亮：按 Range 的所有 client rect 放置覆盖 div，~2s 后移除。
+// 颜色用半透明 amber：浅色页衬托、深色页上也足够可见（外加 2px 描边加强）。
+// red 为真时用红色系（目标单词专用高亮，与整句的 amber 区分开）。
+function flashRects(rects, red) {
+  const container = document.createElement('div');
+  container.setAttribute('data-echoword-flash', '');
+  const fill = red ? 'rgba(192,57,43,0.5)' : 'rgba(255,170,0,0.35)';
+  const ring = red ? 'rgba(255,80,60,0.8)' : 'rgba(255,170,0,0.55)';
+  const scrollX = window.scrollX || window.pageXOffset || 0;
+  const scrollY = window.scrollY || window.pageYOffset || 0;
+  for (const r of rects) {
+    const box = document.createElement('div');
+    box.style.cssText =
+      'position:absolute;pointer-events:none;' +
+      'background:' + fill + ';box-shadow:0 0 0 2px ' + ring + ';border-radius:3px;';
+    box.style.left = r.left + scrollX + 'px';
+    box.style.top = r.top + scrollY + 'px';
+    box.style.width = r.width + 'px';
+    box.style.height = r.height + 'px';
+    container.appendChild(box);
+  }
+  container.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2147483645;';
+  (document.body || document.documentElement).appendChild(container);
+  setTimeout(() => container.remove(), REVEAL_FLASH_MS);
+}
+
+// 把「累积全文偏移区间」映射回具体的文本节点与偏移。
+function rangeToBoundary(segs, lo, hi) {
+  let startNode = null, startOffset = 0, endNode = null, endOffset = 0;
+  for (const seg of segs) {
+    if (startNode === null && lo < seg.end && seg.start < hi) {
+      startNode = seg.node;
+      startOffset = Math.max(0, lo - seg.start);
+    }
+    if (startNode !== null && hi <= seg.end && seg.start < hi) {
+      endNode = seg.node;
+      endOffset = Math.min(seg.node.textContent.length, hi - seg.start);
+      break;
+    }
+  }
+  if (startNode === null || endNode === null) return null;
+  return { startNode, startOffset, endNode, endOffset };
+}
+
+function revealSentence(sentence, word) {
+  const hit = findSentenceOnPage(sentence, word);
+  if (!hit) return; // 页面内容已变化：静默降级
+  try {
+    const range = document.createRange();
+    range.setStart(hit.startNode, hit.startOffset);
+    range.setEnd(hit.endNode, hit.endOffset);
+    if (!range.getClientRects().length) return;
+    range.startContainer.parentElement?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    setTimeout(() => {
+      flashRects(Array.from(range.getClientRects()), false);
+      // 目标单词叠加红色高亮（词边界在扫描内精确算出，见 findSentenceOnPage）。
+      if (hit.wStartNode) {
+        const wr = document.createRange();
+        wr.setStart(hit.wStartNode, hit.wStartOffset);
+        wr.setEnd(hit.wEndNode, hit.wEndOffset);
+        const wRects = Array.from(wr.getClientRects()).filter((r) => r.width || r.height);
+        if (wRects.length) flashRects(wRects, true);
+      }
+    }, 450);
+  } catch (e) {
+    // Range 构建失败（节点被移除等）：静默降级。
+  }
+}
+
+// URL 带 reveal 参数时处理一次并清理参数（页面刷新/分享不会重复闪现）。
+(function initReveal() {
+  try {
+    const params = new URLSearchParams(location.search);
+    const sid = params.get(REVEAL_PARAM);
+    if (!sid) return;
+    params.delete(REVEAL_PARAM);
+    const qs = params.toString();
+    const url = location.pathname + (qs ? '?' + qs : '') + location.hash;
+    history.replaceState(null, '', url);
+    runReveal(sid);
+  } catch (e) {
+    // 参数解析失败不影响正常功能。
+  }
+})();
 
 // ---------- 配置 ----------
 

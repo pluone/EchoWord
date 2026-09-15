@@ -274,5 +274,54 @@
   "closeLabel": {
     "message": "Close",
     "description": "Close button title in the popup card"
+  },
+
+  "saveWordLabel": {
+    "message": "Save to wordbook",
+    "description": "Save (star) button title in the popup card when not saved"
+  },
+  "removeWordLabel": {
+    "message": "Remove from wordbook",
+    "description": "Save (star) button title in the popup card when word and sentence are both saved"
+  },
+  "addSentenceLabel": {
+    "message": "Word is in the wordbook — save this sentence too",
+    "description": "Save (star) button title when the word is saved but this sentence is not"
+  },
+  "wordbookTitle": {
+    "message": "Wordbook",
+    "description": "Wordbook page title"
+  },
+  "wordbookCount": {
+    "message": "$1 words",
+    "description": "Wordbook entry count, $1 is the number"
+  },
+  "wordbookEmpty": {
+    "message": "No saved words yet. Click the star in the popup on a web page to save one.",
+    "description": "Empty wordbook hint"
+  },
+  "openWordbook": {
+    "message": "Open wordbook",
+    "description": "Popup footer button to open the wordbook page"
+  },
+  "wordbookToday": {
+    "message": "Today",
+    "description": "Wordbook date-group heading for today"
+  },
+  "wordbookDeleteWordLabel": {
+    "message": "Remove this word",
+    "description": "Wordbook delete-entry button title"
+  },
+  "wordbookRemoveSourceLabel": {
+    "message": "Remove this sentence",
+    "description": "Wordbook remove-source button title"
+  },
+  "wordbookSpeakWordLabel": {
+    "message": "Read the word",
+    "description": "Wordbook word speaker button title"
+  },
+  "wordbookSpeakSentenceLabel": {
+    "message": "Read the sentence",
+    "description": "Wordbook sentence speaker button title"
   }
 }

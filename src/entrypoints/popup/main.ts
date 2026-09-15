@@ -17,6 +17,7 @@ const globalInput = document.getElementById('global') as HTMLInputElement;
 const allDesc = document.getElementById('allDesc') as HTMLElement;
 const hintEl = document.getElementById('hint') as HTMLElement;
 const openOptionsBtn = document.getElementById('openOptions') as HTMLButtonElement;
+const openWordbookBtn = document.getElementById('openWordbook') as HTMLButtonElement;
 
 let host = '';
 
@@ -127,6 +128,11 @@ enabledInput.addEventListener('change', async () => {
 globalInput.addEventListener('change', () => setGlobal(globalInput.checked));
 
 openOptionsBtn.addEventListener('click', () => chrome.runtime.openOptionsPage());
+
+// 打开单词本页（新标签）。chrome.tabs.create 无需 tabs 权限。
+openWordbookBtn.addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('/wordbook.html') });
+});
 
 async function init() {
   document.documentElement.lang = chrome.i18n.getMessage('@@ui_locale');

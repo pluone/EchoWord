@@ -274,5 +274,54 @@
   "closeLabel": {
     "message": "关闭",
     "description": "弹窗卡片关闭按钮标题"
+  },
+
+  "saveWordLabel": {
+    "message": "收藏到单词本",
+    "description": "弹窗卡片收藏按钮标题（未收藏）"
+  },
+  "removeWordLabel": {
+    "message": "从单词本移除",
+    "description": "弹窗卡片收藏按钮标题（词条与当前句都已收藏）"
+  },
+  "addSentenceLabel": {
+    "message": "单词已在单词本，点击收藏这条例句",
+    "description": "弹窗卡片收藏按钮标题（词条已收藏但当前句未收藏）"
+  },
+  "wordbookTitle": {
+    "message": "单词本",
+    "description": "单词本页面标题"
+  },
+  "wordbookCount": {
+    "message": "$1 个单词",
+    "description": "单词本词条计数，$1 为数量"
+  },
+  "wordbookEmpty": {
+    "message": "还没有收藏的单词。在网页弹窗中点击星标即可收藏。",
+    "description": "单词本为空时提示"
+  },
+  "openWordbook": {
+    "message": "打开单词本",
+    "description": "popup 底部打开单词本按钮"
+  },
+  "wordbookToday": {
+    "message": "今天",
+    "description": "单词本日期分组中今天的标题"
+  },
+  "wordbookDeleteWordLabel": {
+    "message": "移除该单词",
+    "description": "单词本删除词条按钮标题"
+  },
+  "wordbookRemoveSourceLabel": {
+    "message": "移除这条例句",
+    "description": "单词本删除来源例句按钮标题"
+  },
+  "wordbookSpeakWordLabel": {
+    "message": "朗读单词",
+    "description": "单词本词条朗读按钮标题"
+  },
+  "wordbookSpeakSentenceLabel": {
+    "message": "朗读例句",
+    "description": "单词本例句朗读按钮标题"
   }
 }
