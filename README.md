@@ -20,6 +20,7 @@
 - **悬停即查**：鼠标移到生词上弹出卡片，移开自动消失，不打断阅读；
 - **标准发音**：系统 TTS 清晰朗读单词和整句，可选美式 / 英式音标；
 - **在句中学词**：不只看到释义，还能听到、读懂完整句子；
+- **单词本**：遇到想记的词，点卡片上的星标收进单词本——单词、音标、释义连同当下的例句一起保存；以后翻看时能回想起它是在哪句话里遇到的，点击出处还能跳回原文定位；
 - **可固定卡片**：想仔细研究时把卡片固定住，看完再关；
 - **按需生效**：只在英文网页上工作，中文网页不受影响；可对单个网站启停；
 - **灵活触发**：悬停、点击、修饰键组合等多种弹窗触发方式（随系统类型显示）；
@@ -53,7 +54,7 @@ npx tsc --noEmit
 
 ## 使用
 
-阅读英文网页时，把鼠标悬停到陌生单词上，卡片会弹出音标、释义与整句中文翻译，并按设置朗读。点工具栏图标可快速切换「当前站点 / 全部网站」的启用状态，点「打开完整设置」进入设置页调整语音、语速、触发方式等。
+阅读英文网页时，把鼠标悬停到陌生单词上，卡片会弹出音标、释义与整句中文翻译，并按设置朗读。想记住这个词，就点卡片上的星标收进单词本——单词、释义和例句会一起存下来，之后点工具栏图标打开单词本回看：每条释义旁是当时的例句，点击出处可以跳回原网页定位到那句话。点工具栏图标可快速切换「当前站点 / 全部网站」的启用状态，点「打开完整设置」进入设置页调整语音、语速、触发方式等。
 
 **推荐配置**：在设置里开启「朗读单词」「朗读整句」并勾选「先读单词，再读整句」，遇到生词时先听单词、再听整句，顺势在句子里看懂它的用法。
 
@@ -65,6 +66,7 @@ npx tsc --noEmit
 │   │   ├── background/index.ts # MV3 service worker：TTS、必应词典、整句翻译、消息路由
 │   │   ├── content/index.ts    # 核心：Shadow DOM 弹窗、悬停状态机、单词识别
 │   │   ├── offscreen/          # 离屏文档：解析必应词典 HTML（SW 无 DOMParser）
+│   │   ├── wordbook/           # 单词本页面：收藏词条 + 例句出处回看
 │   │   ├── options/            # 设置页
 │   │   └── popup/              # 工具栏弹窗（站点启停管理）
 │   └── public/                 # 静态资源：_locales/（中英文案）、icons/
@@ -78,8 +80,10 @@ npx tsc --noEmit
 ## 开发细节
 
 - 配置存于 `chrome.storage.local`，content 脚本通过 `chrome.storage.onChanged` 实时应用：`voiceName, volume, rate, hoverDelay, autoSpeak, speakMode, sentenceBreak, stickyPopup, translator, phonetics, popupMode, siteMode, siteDisabled, siteEnabled, excludedVoices, dictCache`。
-- 消息协议：content → background 的 `type` 为 `speak` / `speakSequence` / `stop` / `lookup` / `translate` / `getVoices`；background → offscreen 为 `parseDictHtml`。
+- 消息协议：content → background 的 `type` 为 `speak` / `speakSequence` / `stop` / `lookup` / `translate` / `getVoices` / `wordbookCheck` / `wordbookAdd` / `wordbookRemove` / `wordbookGetData` / `wordbookGetSource` / `wordbookDeleteWord` / `wordbookRemoveSource`；background → offscreen 为 `parseDictHtml`。
 - 站点启停：全站总开关映射到 `siteMode`（blacklist = 全局开启 / whitelist = 全局关闭），配合 `siteDisabled` / `siteEnabled` 两个站点列表，概念对用户不可见。
+
+- 单词本：收藏数据存于 `chrome.storage.local` 的 `wordbook` key，一词一条、多句子来源（每条来源含例句 + 翻译 + 出处 URL/标题）；出处链接通过 `?echoword_reveal=<sid>` 参数由内容脚本定位并闪现高亮。
 
 ## 文档
 
