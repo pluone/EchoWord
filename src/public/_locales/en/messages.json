@@ -304,6 +304,14 @@
     "message": "Open wordbook",
     "description": "Popup footer button to open the wordbook page"
   },
+  "navWordbook": {
+    "message": "Wordbook",
+    "description": "Top nav tab for the wordbook page"
+  },
+  "navSettings": {
+    "message": "Settings",
+    "description": "Top nav tab for the settings page"
+  },
   "wordbookToday": {
     "message": "Today",
     "description": "Wordbook date-group heading for today"

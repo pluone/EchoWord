@@ -32,6 +32,33 @@ body {
   color: var(--wb-text);
 }
 
+/* 顶部导航栏：与设置页共用样式，当前页高亮。 */
+.top-nav {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--wb-border);
+  margin: -8px 0 20px;
+}
+
+.nav-tab {
+  padding: 8px 14px 10px;
+  font-size: 14px;
+  color: var(--wb-text-muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.nav-tab:hover {
+  color: var(--wb-text);
+}
+
+.nav-tab.active {
+  color: #1a73e8;
+  font-weight: 600;
+  border-bottom-color: #1a73e8;
+}
+
 .wb-header {
   display: flex;
   align-items: baseline;

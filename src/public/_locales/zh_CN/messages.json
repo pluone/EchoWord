@@ -304,6 +304,14 @@
     "message": "打开单词本",
     "description": "popup 底部打开单词本按钮"
   },
+  "navWordbook": {
+    "message": "单词本",
+    "description": "顶部导航栏的单词本标签"
+  },
+  "navSettings": {
+    "message": "设置",
+    "description": "顶部导航栏的设置标签"
+  },
   "wordbookToday": {
     "message": "今天",
     "description": "单词本日期分组中今天的标题"

@@ -11,7 +11,34 @@ body {
 
 h1 {
   font-size: 18px;
-  margin: 0 0 8px;
+  margin: 0;
+}
+
+/* 顶部导航栏：两页共用，当前页高亮。 */
+.top-nav {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+  margin: -8px 0 20px;
+}
+
+.nav-tab {
+  padding: 8px 14px 10px;
+  font-size: 14px;
+  color: #888;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.nav-tab:hover {
+  color: inherit;
+}
+
+.nav-tab.active {
+  color: #1a73e8;
+  font-weight: 600;
+  border-bottom-color: #1a73e8;
 }
 
 .field {
