@@ -204,13 +204,10 @@ function renderEntry(entry) {
       entryEl.appendChild(line);
     }
 
-    // 来源例句：朗读按钮 + 整句 + 译文 + 出处链接 + 删除本句按钮。
+    // 来源例句：朗读按钮 + 整句（尾部带 HN 风格域名链接）+ 译文 + 删除按钮。
     for (const src of entry.sources || []) {
       const sourceEl = document.createElement('div');
       sourceEl.className = 'source';
-
-      const sHead = document.createElement('div');
-      sHead.className = 'entry-head';
 
       const sentSpeak = document.createElement('button');
       sentSpeak.type = 'button';
@@ -220,10 +217,29 @@ function renderEntry(entry) {
       sentSpeak.innerHTML = SPEAKER_SVG;
       sentSpeak.addEventListener('click', () => speak(src.sentence));
 
+      // 例句行：朗读按钮 + 例句（HN 风格域名链接紧随其后，行内排布）。
       const sentEl = document.createElement('span');
       sentEl.className = 'source-sentence';
       // 例句中目标单词加粗标红，方便扫读定位。
       sentEl.append(renderSentence(src.sentence, entry.word));
+
+      // HN 风格的域名链接：点击跳原页并定位到例句位置（与原出处链接行为一致）。
+      const domain = (() => {
+        try {
+          return new URL(src.url).hostname.replace(/^www\./, '');
+        } catch {
+          return src.url;
+        }
+      })();
+      const domainEl = document.createElement('a');
+      domainEl.className = 'source-domain';
+      domainEl.textContent = `(${domain})`;
+      domainEl.title = domain;
+      domainEl.href = revealUrl(src.url, src.sid);
+      domainEl.target = '_blank';
+      domainEl.rel = 'noopener';
+
+      sentEl.appendChild(domainEl);
 
       const sSpacer = document.createElement('span');
       sSpacer.className = 'spacer';
@@ -240,8 +256,10 @@ function renderEntry(entry) {
           .catch(() => { });
       });
 
-      sHead.append(sentSpeak, sentEl, sSpacer, delSource);
-      sourceEl.appendChild(sHead);
+      const sentRow = document.createElement('div');
+      sentRow.className = 'source-row';
+      sentRow.append(sentSpeak, sentEl, sSpacer, delSource);
+      sourceEl.appendChild(sentRow);
 
       if (src.trans) {
         const transEl = document.createElement('p');
@@ -249,15 +267,6 @@ function renderEntry(entry) {
         transEl.textContent = src.trans;
         sourceEl.appendChild(transEl);
       }
-
-      // 出处链接：单击在新标签打开原页并定位到例句的位置。
-      const linkEl = document.createElement('a');
-      linkEl.className = 'source-link';
-      linkEl.href = revealUrl(src.url, src.sid);
-      linkEl.target = '_blank';
-      linkEl.rel = 'noopener';
-      linkEl.textContent = src.title || src.url;
-      sourceEl.appendChild(linkEl);
 
       entryEl.appendChild(sourceEl);
     }

@@ -163,6 +163,12 @@ h1 {
   padding-top: 10px;
 }
 
+.source-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .source-sentence {
   font-size: 14px;
   line-height: 1.5;
@@ -175,10 +181,15 @@ h1 {
   margin: 4px 0 0 calc(26px + 8px); /* 与朗读图标右侧对齐 */
 }
 
-.source-link {
+/* HN 风格来源：紧贴在例句文字后面的 (域名) 链接 */
+.source-domain {
   font-size: 12px;
   color: #1a73e8;
-  word-break: break-all;
-  display: inline-block;
-  margin: 6px 0 0 calc(26px + 8px);
+  margin-left: 4px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.source-domain:hover {
+  text-decoration: underline;
 }
