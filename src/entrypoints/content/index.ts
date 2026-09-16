@@ -1,7 +1,10 @@
+import popupCss from './popup.css?inline';
+import popupHtmlRaw from './popup.html?raw';
 export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_idle',
   main() {
+
 // EchoWord — 悬停单词即弹出小卡片并朗读（已移除原来的「选中即朗读」）。
 //
 // 行为：
@@ -95,189 +98,18 @@ setHost('left', '0px');
 setHost('top', '0px');
 setHost('display', 'none');
 
-const SPEAKER_SVG =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-  '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
-const CLOSE_SVG =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
-  '<path d="M18 6 6 18M6 6l12 12"/></svg>';
-// 收藏星标：同一路径，未收藏时 stroke 描边（outline）、已收藏时 fill 填充（fill），
-// 由 renderSaveState 按状态切换 fill / stroke 属性。
-const STAR_SVG =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
-  '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9-5.3-2.9-5.3 2.9 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>';
+// HTML 模板里保留 ${chrome.i18n.getMessage(...)} 占位符，拼装前先行求值替换。
+// 注意：WXT 打包 ?raw 模板时会把 ${ 转义为 \${，先剥掉反斜杠再匹配。
+const POPUP_HTML = popupHtmlRaw
+  .replace(/\\(?=\$\{)/g, '')
+  .replace(/\$\{chrome\.i18n\.getMessage\('([^']+)'\)\}/g, (_, key) => chrome.i18n.getMessage(key));
 
 const shadow = host.attachShadow({ mode: 'open' });
 shadow.innerHTML = `
 <style>
-  .popup {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 8px 12px;
-    background: #fff;
-    color: #1a1a1a;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    border-radius: 8px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 14px;
-    line-height: 1.35;
-    /* 宽度先按内容自适应（fit-content），首次内容加载后由 JS 固化为像素；
-       固化的宽度始终不小于标题行（见 ensurePopupWidth），此后正文继续加载只在
-       纵向扩展，不再改变宽度。 */
-    width: fit-content;
-    max-width: min(60vw, 420px);
-    box-sizing: border-box;
-  }
-  /* 底边的向下小尖角，指向单词盒中心（--arrow-x 由 JS 按单词位置喂入，clamp 在弹窗内）。 */
-  .popup::after {
-    content: '';
-    position: absolute;
-    left: var(--arrow-x, 50%);
-    bottom: -6px;
-    transform: translateX(-50%);
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 6px solid #fff;
-  }
-  /* 上方空间不足、弹窗翻转到单词下方时，尖角改为朝上。 */
-  .popup.below::after {
-    bottom: auto;
-    top: -6px;
-    border-top: none;
-    border-bottom: 6px solid #fff;
-  }
-  /* 弹窗底边外的 6px 全宽透明接驳带（与尖角同深）：把整条边扩成可悬停带，
-     命中后经 shadow 重定向为 host → clearHide，途中不落页面/其它单词上。 */
-  .catch {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -6px;
-    height: 6px;
-  }
-  .popup.below .catch {
-    bottom: auto;
-    top: -6px;
-  }
-  .head {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .word {
-    font-size: 15px;
-    font-weight: 600;
-    white-space: nowrap;
-    flex: 1 1 auto;
-    /* 单词可给音标/按钮让位：弹窗已到最大宽度、标题行仍放不下时，单词截断成省略号不外溢。 */
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .phons {
-    color: #333;
-    font-size: 14px;
-    font-weight: 600;
-    white-space: nowrap;
-    margin-left: auto; /* 音标靠右 */
-    flex: none; /* 音标不被压缩，放不下的宽度由单词省略号承担 */
-  }
-  .phons .vowel { color: #c0392b; } /* 元音红色 */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: none;
-    background: none;
-    cursor: pointer;
-    border-radius: 4px;
-    color: #444;
-    flex: none;
-  }
-  .btn:hover { background: rgba(0, 0, 0, 0.08); }
-  .btn svg { width: 16px; height: 16px; display: block; }
-  .close { color: #999; }
-  /* 收藏按钮（星）三态：
-     - 描边：该单词完全未收藏；
-     - 金色填充（.starred）：词条已收藏 且 当前句已收藏 —— 点击取消本句；
-     - 淡金色填充（.part）：词条已收藏但当前句未收藏 —— 点击追加本句，
-       既表示「这个单词已在单词本里」也提示「还能再收一句」。 */
-  .btn.save.starred { color: #f5a623; }
-  .btn.save.part { color: #fbc968; }
-  .body {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-    padding-top: 6px;
-    margin-top: 2px;
-  }
-  .body[hidden] { display: none; }
-  .def-line {
-    font-size: 13px;
-    line-height: 1.4;
-    color: #333;
-  }
-  .def-line .pos {
-    color: #1a73e8;
-    font-weight: 600;
-    margin-right: 4px;
-  }
-  .trans {
-    font-size: 13px;
-    font-style: italic;
-    line-height: 1.4;
-    color: #1a1a1a;
-  }
-  .trans[hidden] { display: none; }
-  /* 底部固定栏：朗读单词 / 朗读句子两个文字按钮。 */
-  .foot {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-    padding-top: 6px;
-    margin-top: 2px;
-  }
-  .foot .fbtn {
-    border: none;
-    background: none;
-    cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font: inherit;
-    font-size: 13px;
-    color: #1a73e8;
-    white-space: nowrap;
-    flex: 1 1 0; /* 两按钮平分底部一栏宽度 */
-  }
-  .foot .fbtn:hover { background: rgba(26, 115, 232, 0.08); }
-  .foot .fbtn[hidden] { display: none; }</style>
-<div class="popup">
-  <div class="head">
-    <button class="btn speak" type="button" title="${chrome.i18n.getMessage('speakLabel')}" aria-label="${chrome.i18n.getMessage('speakLabel')}">${SPEAKER_SVG}</button>
-    <span class="word"></span>
-    <span class="phons"></span>
-    <button class="btn save" type="button" title="${chrome.i18n.getMessage('saveWordLabel')}" aria-label="${chrome.i18n.getMessage('saveWordLabel')}">${STAR_SVG}</button>
-    <button class="btn close" type="button" title="${chrome.i18n.getMessage('closeLabel')}" aria-label="${chrome.i18n.getMessage('closeLabel')}">${CLOSE_SVG}</button>
-  </div>
-  <div class="body" hidden>
-    <div class="defs"></div>
-    <div class="trans" hidden></div>
-  </div>
-  <div class="foot">
-    <button class="fbtn speak-word" type="button"></button>
-    <button class="fbtn speak-sentence" type="button"></button>
-  </div>
-  <span class="catch"></span>
-</div>
+${popupCss}
+</style>
+${POPUP_HTML}
 `;
 
 const wordEl = shadow.querySelector<HTMLElement>('.word');
