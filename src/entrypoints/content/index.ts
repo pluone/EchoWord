@@ -23,7 +23,7 @@ const DEFAULT_OPTIONS = {
   speakMode: 'word',
   // 朗读整句时的断句方式：'period' 断到句号（默认）| 'comma' 断到逗号等句内停顿。
   sentenceBreak: 'period',
-  stickyPopup: false,
+  stickyPopup: true,
   phonetics: 'us', // 弹窗中展示的音标：'us' 美式（默认）| 'uk' 英式
   popupMode: 'hover_click', // 弹窗触发方式，见 popupModeConfig
   siteMode: 'blacklist', // 站点启停模式：'blacklist' 黑名单 | 'whitelist' 白名单

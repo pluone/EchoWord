@@ -37,7 +37,7 @@ const DEFAULTS = {
   autoSpeak: true, // 默认「弹窗出现后自动播放发音」
   speakMode: 'word', // 'word' 单词 | 'sentence' 整句 | 'word_sentence' 先单词后整句
   sentenceBreak: 'period', // 朗读整句断句：'period' 句号（默认）| 'comma' 逗号
-  stickyPopup: false,
+  stickyPopup: true,
   translator: 'bing', // 'google' | 'bing'
   phonetics: 'us', // 'us' 美式 | 'uk' 英式
   popupMode: 'hover_click', // 弹窗触发方式，见 options.html 的 Pop-up mode 分组
