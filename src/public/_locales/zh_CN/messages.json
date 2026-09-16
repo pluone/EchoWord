@@ -271,6 +271,14 @@
     "message": "朗读",
     "description": "弹窗卡片朗读按钮标题"
   },
+  "speakWordLabel": {
+    "message": "朗读单词",
+    "description": "弹窗底部固定栏朗读单词按钮"
+  },
+  "speakSentenceLabel": {
+    "message": "朗读句子",
+    "description": "弹窗底部固定栏朗读句子按钮"
+  },
   "closeLabel": {
     "message": "关闭",
     "description": "弹窗卡片关闭按钮标题"

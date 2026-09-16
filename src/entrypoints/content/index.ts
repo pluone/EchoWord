@@ -236,7 +236,30 @@ shadow.innerHTML = `
     color: #1a1a1a;
   }
   .trans[hidden] { display: none; }
-</style>
+  /* 底部固定栏：朗读单词 / 朗读句子两个文字按钮。 */
+  .foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding-top: 6px;
+    margin-top: 2px;
+  }
+  .foot .fbtn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 13px;
+    color: #1a73e8;
+    white-space: nowrap;
+    flex: 1 1 0; /* 两按钮平分底部一栏宽度 */
+  }
+  .foot .fbtn:hover { background: rgba(26, 115, 232, 0.08); }
+  .foot .fbtn[hidden] { display: none; }</style>
 <div class="popup">
   <div class="head">
     <button class="btn speak" type="button" title="${chrome.i18n.getMessage('speakLabel')}" aria-label="${chrome.i18n.getMessage('speakLabel')}">${SPEAKER_SVG}</button>
@@ -248,6 +271,10 @@ shadow.innerHTML = `
   <div class="body" hidden>
     <div class="defs"></div>
     <div class="trans" hidden></div>
+  </div>
+  <div class="foot">
+    <button class="fbtn speak-word" type="button"></button>
+    <button class="fbtn speak-sentence" type="button"></button>
   </div>
   <span class="catch"></span>
 </div>
@@ -262,6 +289,8 @@ const speakBtn = shadow.querySelector<HTMLElement>('.speak');
 const closeBtn = shadow.querySelector<HTMLElement>('.close');
 const saveBtn = shadow.querySelector<HTMLElement>('.save');
 const saveSvg = shadow.querySelector<HTMLElement>('.save svg');
+const speakWordBtn = shadow.querySelector<HTMLElement>('.speak-word');
+const speakSentenceBtn = shadow.querySelector<HTMLElement>('.speak-sentence');
 const popupEl = shadow.querySelector<HTMLElement>('.popup');
 const headEl = shadow.querySelector<HTMLElement>('.head');
 
@@ -607,6 +636,13 @@ function renderPopup(word) {
   transEl.textContent = '';
   transEl.hidden = true;
   bodyEl.hidden = true;
+  // 底部固定栏文案（i18n，静态内容，每次重渲染时兜底填充）。
+  const wordLabel = chrome.i18n.getMessage('speakWordLabel');
+  const sentenceLabel = chrome.i18n.getMessage('speakSentenceLabel');
+  speakWordBtn.textContent = wordLabel;
+  speakWordBtn.title = wordLabel;
+  speakSentenceBtn.textContent = sentenceLabel;
+  speakSentenceBtn.title = sentenceLabel;
   // 每次展示重新按内容确定宽度：解除冻结，恢复 fit-content。
   widthLocked = false;
   popupEl.style.width = '';
@@ -819,6 +855,8 @@ function showPopup(info) {
   // 翻译用整句：读到句末标点、不做 30 词截取；朗读用的片段与之不同，在 speakFor 里单独提取。
   const sentence = sentenceForTranslation(info);
   activeSentence = sentence;
+  // 没有句子上下文（如标题、孤立单词）时隐藏朗读句子按钮。
+  speakSentenceBtn.hidden = !sentenceForSpeak(info);
   // 同步收藏态所需上下文：例句用于保存、译文缓存在 renderTranslation 更新。
   savedSentence = sentence;
   lastTranslation = null;
@@ -1058,6 +1096,23 @@ document.addEventListener(
 
 speakBtn.addEventListener('click', () => {
   if (currentWord) speakFor(currentWord);
+});
+
+// 底部固定栏：朗读单词 / 朗读句子，跳过 speakMode 直接按其朗读。
+speakWordBtn.addEventListener('click', () => {
+  if (currentWord && currentWord.word) {
+    stopSpeaking();
+    speakText(currentWord.word);
+  }
+});
+speakSentenceBtn.addEventListener('click', () => {
+  if (currentWord) {
+    const sentence = sentenceForSpeak(currentWord);
+    if (sentence) {
+      stopSpeaking();
+      speakText(sentence);
+    }
+  }
 });
 
 closeBtn.addEventListener('click', hidePopup);

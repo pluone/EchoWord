@@ -271,6 +271,14 @@
     "message": "Read aloud",
     "description": "Read-aloud button title in the popup card"
   },
+  "speakWordLabel": {
+    "message": "Read word",
+    "description": "Read word button in the popup footer bar"
+  },
+  "speakSentenceLabel": {
+    "message": "Read sentence",
+    "description": "Read sentence button in the popup footer bar"
+  },
   "closeLabel": {
     "message": "Close",
     "description": "Close button title in the popup card"
