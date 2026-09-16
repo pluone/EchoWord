@@ -14,6 +14,14 @@
     <span class="wb-count" id="count"></span>
   </header>
 
+  <p class="wb-backup-hint" id="backupHint" data-i18n="wordbookBackupHint"></p>
+  <div class="wb-backup-actions">
+    <button type="button" class="wb-backup-btn" id="exportBtn" data-i18n="wordbookExport"></button>
+    <button type="button" class="wb-backup-btn" id="importBtn" data-i18n="wordbookImport"></button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden />
+    <span class="wb-backup-status" id="importStatus" role="status"></span>
+  </div>
+
   <p class="wb-empty" id="empty" data-i18n="wordbookEmpty" hidden></p>
 
   <main class="wb-list" id="list"></main>

@@ -339,5 +339,33 @@
   "wordbookSpeakSentenceLabel": {
     "message": "Read the sentence",
     "description": "Wordbook sentence speaker button title"
+  },
+  "wordbookBackupHint": {
+    "message": "Tip: uninstalling the extension deletes your wordbook — export a backup regularly.",
+    "description": "Wordbook backup hint"
+  },
+  "wordbookExport": {
+    "message": "Export backup",
+    "description": "Wordbook export button"
+  },
+  "wordbookImport": {
+    "message": "Import backup",
+    "description": "Wordbook import button"
+  },
+  "wordbookExportDone": {
+    "message": "Exported as JSON file",
+    "description": "Export success status"
+  },
+  "wordbookImportNothing": {
+    "message": "Nothing to export yet",
+    "description": "Export clicked with an empty wordbook"
+  },
+  "wordbookImportDone": {
+    "message": "Imported — $1 new sentences added",
+    "description": "Import success status, $1 is the number of new source sentences"
+  },
+  "wordbookImportInvalid": {
+    "message": "Import failed: invalid file format",
+    "description": "Import failure status"
   }
 }

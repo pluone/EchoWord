@@ -569,6 +569,88 @@ async function wordbookDeleteWord(wordKey) {
   return { ok: true };
 }
 
+// 导入：与现有词条按 wordKey 合并、来源按 sid 去重；同 sid 冲突时保留 ts 较新者。
+// 词条级快照（音标/释义）在冲突时也采较新来源所属词条的字段，其余字段取既有值兜底。
+// 合并结果经 clampWordbook 收口，防止导入超过软上限。
+async function wordbookImport(data) {
+  if (!data || typeof data !== 'object' || typeof data.entries !== 'object')
+    return { ok: false };
+  const now = Date.now();
+  const wb = await readWordbook();
+  let imported = 0;
+  for (const item of Object.values(data.entries)) {
+    const e = item as WbEntry;
+    const wk = wordKeyOf(e?.word);
+    if (!wk || !Array.isArray(e?.sources)) continue;
+    const sources: WbSource[] = [];
+    for (const s of e.sources) {
+      if (!s || typeof s !== 'object' || !s.sid) continue;
+      sources.push({
+        sid: String(s.sid),
+        url: String(s.url || ''),
+        title: typeof s.title === 'string' ? s.title : undefined,
+        sentence: String(s.sentence || ''),
+        trans: String(s.trans || ''),
+        ts: Number(s.ts) || now,
+      });
+    }
+    if (!sources.length) continue;
+    const existing = wb[wk];
+    const incoming = {
+      word: String(e.word),
+      // 缺失 ts 时兜底 now，导入条目排在时间线尾部
+      ts: Number(e.ts) || now,
+      us: String(e.us || ''),
+      uk: String(e.uk || ''),
+      defs: Array.isArray(e.defs)
+        ? e.defs
+            .filter((d) => d && typeof d === 'object')
+            .map((d) => ({
+              pos: String(d.pos || ''),
+              defs: Array.isArray(d.defs) ? d.defs.map(String) : [],
+            }))
+        : [],
+      sources,
+    };
+    if (!existing) {
+      wb[wk] = incoming;
+      imported += sources.length;
+      continue;
+    }
+    const entry = existing;
+    const latestOf = (list: WbSource[]) =>
+      list.reduce((m, s) => Math.max(m, s.ts || 0), 0);
+    // 词条级快照采 ts 较新完整侧；一方缺失时用另一侧兜底
+    if (latestOf(incoming.sources) >= latestOf(entry.sources)) {
+      entry.word = entry.word || incoming.word;
+      entry.ts = entry.ts || incoming.ts;
+      entry.us = entry.us || incoming.us;
+      entry.uk = entry.uk || incoming.uk;
+      entry.defs = entry.defs.length ? entry.defs : incoming.defs;
+    } else {
+      entry.us = incoming.us || entry.us;
+      entry.uk = incoming.uk || entry.uk;
+      entry.defs = incoming.defs.length ? incoming.defs : entry.defs;
+    }
+    for (const s of incoming.sources) {
+      const prev = entry.sources.find((x) => x.sid === s.sid);
+      if (!prev) {
+        entry.sources.push(s);
+        imported += 1;
+      } else if ((s.ts || 0) > (prev.ts || 0)) {
+        entry.sources = entry.sources.map((x) => (x.sid === s.sid ? s : x));
+      }
+    }
+    wb[wk] = entry;
+  }
+  try {
+    await chrome.storage.local.set({ [WORDBOOK_KEY]: clampWordbook(wb) });
+  } catch (e) {
+    return { ok: false };
+  }
+  return { ok: true, imported };
+}
+
 // 按词条键与来源 id 精确删除一条来源（单词本页逐句删除用）。
 async function wordbookRemoveSource(wordKey, sid) {
   const wb = await readWordbook();
@@ -729,6 +811,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         sendResponse({ ok: true, data: null });
       })
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
+  if (message?.type === 'wordbookImport') {
+    enqueueWb(() => wordbookImport(message.data))
+      .then((res) => sendResponse(res))
       .catch(() => sendResponse({ ok: false }));
     return true;
   }

@@ -111,7 +111,88 @@ function formatDayLabel(ts) {
   });
 }
 
+// ---------- 备份：导入 / 导出 ----------
+//
+// 卸载扩展会清空 chrome.storage.local，单词本数据无法找回。这里提供主动备份：
+// 导出为带 version 字段的 JSON 文件，导入时按 wordKey/sid 合并去重。
+
+const backupHintEl = document.getElementById('backupHint') as HTMLElement;
+const importStatusEl = document.getElementById('importStatus') as HTMLElement;
+
+// 有数据时才显示备份提示（空词库无需备份）。
+function updateBackupHint(entryCount) {
+  backupHintEl.hidden = entryCount === 0;
+}
+
+// 当前词条数据（wordbookGetData 返回的是数组），供导出使用。
+let entriesForExport = [];
+
+function exportWordbook() {
+  if (!entriesForExport.length) {
+    importStatusEl.textContent = chrome.i18n.getMessage('wordbookImportNothing');
+    return;
+  }
+  const payload = {
+    app: 'echoword-wordbook',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    entries: entriesForExport,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: 'application/json',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `echoword-wordbook-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  importStatusEl.textContent = chrome.i18n.getMessage('wordbookExportDone');
+}
+
+function validateImportFile(text) {
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!data || typeof data !== 'object' || typeof data.entries !== 'object')
+    return null;
+  return data;
+}
+
+async function importWordbook(file) {
+  importStatusEl.textContent = '';
+  const data = validateImportFile(await file.text());
+  if (!data) {
+    importStatusEl.textContent = chrome.i18n.getMessage('wordbookImportInvalid');
+    return;
+  }
+  const res = await chrome.runtime
+    .sendMessage({ type: 'wordbookImport', data })
+    .catch(() => null);
+  if (res && res.ok) {
+    importStatusEl.textContent = chrome.i18n.getMessage('wordbookImportDone', [
+      String(res.imported || 0),
+    ]);
+  } else {
+    importStatusEl.textContent = chrome.i18n.getMessage('wordbookImportInvalid');
+  }
+}
+
+const importFileEl = document.getElementById('importFile') as HTMLInputElement;
+document.getElementById('exportBtn').addEventListener('click', exportWordbook);
+document.getElementById('importBtn').addEventListener('click', () => importFileEl.click());
+importFileEl.addEventListener('change', () => {
+  const file = importFileEl.files && importFileEl.files[0];
+  if (file) importWordbook(file);
+  importFileEl.value = ''; // 允许重复选择同一文件
+});
+
 function render(entries) {
+  entriesForExport = entries;
+  updateBackupHint(entries.length);
   listEl.textContent = '';
   emptyEl.hidden = entries.length > 0;
   countEl.textContent = entries.length

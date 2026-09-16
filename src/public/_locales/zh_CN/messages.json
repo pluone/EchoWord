@@ -339,5 +339,33 @@
   "wordbookSpeakSentenceLabel": {
     "message": "朗读例句",
     "description": "单词本例句朗读按钮标题"
+  },
+  "wordbookBackupHint": {
+    "message": "提示：卸载扩展会删除单词本数据，建议定期导出备份。",
+    "description": "单词本页备份提示"
+  },
+  "wordbookExport": {
+    "message": "导出备份",
+    "description": "单词本导出按钮"
+  },
+  "wordbookImport": {
+    "message": "导入备份",
+    "description": "单词本导入按钮"
+  },
+  "wordbookExportDone": {
+    "message": "已导出 JSON 文件",
+    "description": "导出成功状态"
+  },
+  "wordbookImportNothing": {
+    "message": "还没有可导出的单词",
+    "description": "单词本为空时点击导出的提示"
+  },
+  "wordbookImportDone": {
+    "message": "导入完成，新增 $1 条例句",
+    "description": "导入成功状态，$1 为新增来源例句数"
+  },
+  "wordbookImportInvalid": {
+    "message": "导入失败：文件格式无效",
+    "description": "导入失败状态"
   }
 }

@@ -82,6 +82,39 @@ h1 {
   color: var(--wb-text-faint);
 }
 
+/* 备份提示与导入/导出操作区（提示仅在有词条时显示）。 */
+.wb-backup-hint {
+  font-size: 12px;
+  color: var(--wb-text-muted);
+  margin: 2px 0 6px;
+}
+
+.wb-backup-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.wb-backup-btn {
+  font-size: 12px;
+  padding: 3px 10px;
+  border: 1px solid var(--wb-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wb-text);
+  cursor: pointer;
+}
+
+.wb-backup-btn:hover {
+  border-color: var(--wb-text-muted);
+}
+
+.wb-backup-status {
+  font-size: 12px;
+  color: var(--wb-text-muted);
+}
+
 .wb-list {
   margin-top: 20px;
 }
