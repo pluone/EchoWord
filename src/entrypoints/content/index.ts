@@ -687,8 +687,9 @@ function showPopup(info) {
   // 翻译用整句：读到句末标点、不做 30 词截取；朗读用的片段与之不同，在 speakFor 里单独提取。
   const sentence = sentenceForTranslation(info);
   activeSentence = sentence;
-  // 没有句子上下文（如标题、孤立单词）时隐藏朗读句子按钮。
+  // 没有句子上下文（如标题、孤立单词）时隐藏朗读句子按钮，分割线随之隐藏。
   speakSentenceBtn.hidden = !sentenceForSpeak(info);
+  shadow.querySelector<HTMLElement>('.foot .divider').hidden = speakSentenceBtn.hidden;
   // 同步收藏态所需上下文：例句用于保存、译文缓存在 renderTranslation 更新。
   savedSentence = sentence;
   lastTranslation = null;

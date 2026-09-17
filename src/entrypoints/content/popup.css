@@ -147,5 +147,12 @@
   white-space: nowrap;
   flex: 1 1 0; /* 两按钮平分底部一栏宽度 */
 }
-.foot .fbtn:hover { background: rgba(26, 115, 232, 0.08); }
 .foot .fbtn[hidden] { display: none; }
+/* 两个朗读按钮之间的竖向分割线：随第二个按钮一起隐藏，只剩一个按钮时不显示。 */
+.foot .divider {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(0, 0, 0, 0.12);
+  flex: none;
+}
+.foot .divider[hidden] { display: none; }
