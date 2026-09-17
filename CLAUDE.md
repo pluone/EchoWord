@@ -26,6 +26,8 @@ EchoWord —— Chrome 扩展（Manifest V3）：悬停/点击英文单词弹出
 - **`src/entrypoints/options/`、`src/entrypoints/popup/`** — 设置页 / 工具栏弹窗。站点启停管理 UI 全在 popup（两个 tab：当前站点 / 全部网站）。「全部网站」是全局总开关，映射到 `siteMode`（开=blacklist，关=whitelist）；「当前站点」做单站开关。黑/白名单概念对用户不可见。popup 底部有「打开单词本 / 打开完整设置」两个链接按钮（垂直两行）。
 - **`wxt.config.ts`** — `srcDir:'src'`、`outDir:'dist'`、`publicDir:'src/public'`，以及 manifest 自动生成的配置项（permissions、host_permissions、icons、default_locale）。
 
+- `landing/` 目录是落地页，单独部署到 Cloudflare Pages。
+
 ## 关键约定（不显而易见的）
 
 - **入口包裹**：content/background 是打包型 entrypoint，副作用代码必须放进 `main()`（WXT 构建时会在 Node 环境求值入口文件）。`options`/`popup`/`offscreen`/`wordbook` 是 HTML 引用的页面脚本（`index.html` → `main.ts`），在浏览器端执行，顶层 `init()`/`onMessage.addListener` 安全。
