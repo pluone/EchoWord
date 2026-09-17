@@ -668,12 +668,13 @@ async function wordbookRemoveSource(wordKey, sid) {
   return { ok: true };
 }
 
-// 全量词条，按最近更新时间降序（复习页按新近度查看）。
+// 全量词条，按首次收藏时间降序。单词本页按 entry.ts 分组展示日期，
+// 排序必须用同一口径——若按来源最新活动时间排序，旧词条今天补了例句
+// 会被顶到最前，却分组在旧日期下，日期标题就会来回交替。
 function sortedWordbook(wb: WbMap) {
-  const latest = (e: WbEntry) => e.sources.reduce((m, s) => Math.max(m, s.ts || 0), 0);
   return Object.entries(wb)
     .map(([wordKey, entry]) => ({ wordKey, ...entry }))
-    .sort((a, b) => latest(b) - latest(a));
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
