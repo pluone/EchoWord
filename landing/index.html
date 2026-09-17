@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EchoWord — 让每个英文单词都能读出来、看得懂</title>
+<meta name="description" content="EchoWord 是一款 Chrome 扩展：悬停英文单词即弹出音标、释义与整句翻译，并用 TTS 朗读单词和整句。在语境中学习，告别哑巴英语。">
+<meta property="og:title" content="EchoWord — 让每个英文单词都能读出来、看得懂">
+<meta property="og:description" content="悬停即查、TTS 朗读整句、在语境中背单词。备考四六级、考研、雅思托福，读文档、逛 Stack Overflow 的你，都值得一个会发声的词典。">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+  :root {
+    --ink: #17233b;
+    --muted: #5b6478;
+    --accent: #2563eb;
+    --accent-dark: #1d4ed8;
+    --gold: #d97706;
+    --bg: #ffffff;
+    --bg-soft: #f6f8fc;
+    --line: #e5e9f2;
+    --radius: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  img { max-width: 100%; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--ink); }
+  .brand svg { flex: none; }
+  .nav-links { display: flex; align-items: center; gap: 22px; font-size: 14px; }
+  .nav-links a { color: var(--muted); }
+  .nav-links a:hover { color: var(--ink); }
+  .btn {
+    display: inline-block; padding: 9px 20px; border-radius: 10px;
+    font-weight: 600; font-size: 15px; transition: .15s; cursor: pointer; border: 0;
+  }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,.28); }
+  .btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); }
+  .btn-ghost { background: transparent; border: 1.5px solid var(--line); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 84px 0 56px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: -40% -20% auto; height: 130%;
+    background: radial-gradient(600px 320px at 50% 0%, rgba(37,99,235,.10), transparent 70%);
+    pointer-events: none;
+  }
+  .hero > * { position: relative; }
+  .hero h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.25; letter-spacing: -.01em; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p.sub {
+    max-width: 620px; margin: 20px auto 0; font-size: 18px; color: var(--muted);
+  }
+  .hero-cta { margin-top: 36px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .hero-cta .btn { padding: 13px 28px; font-size: 16px; }
+  .store-note { margin-top: 14px; font-size: 13px; color: var(--muted); }
+
+  /* ---------- audience ---------- */
+  .audience { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 48px 0 44px; }
+  .audience .label { display: block; font-size: 13px; font-weight: 600; letter-spacing: .08em; color: var(--accent); text-transform: uppercase; margin-bottom: 18px; }
+  .audience-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; max-width: 960px; }
+  .audience-item {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; transition: .18s;
+  }
+  .audience-item:hover { transform: translateY(-2px); box-shadow: 0 10px 26px -12px rgba(23,35,59,.16); border-color: #d3dcec; }
+  .audience-item .who { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .audience-item .where { font-size: 13.5px; color: var(--muted); }
+  .audience-common { margin-top: 22px; font-size: 16px; color: var(--muted); }
+  .audience-common b { color: var(--ink); }
+
+  /* ---------- sections ---------- */
+  section {}
+  .section { padding: 72px 0; }
+  .section-head { text-align: center; max-width: 640px; margin: 0 auto 44px; }
+  .section-head h2 { font-size: clamp(24px, 3.4vw, 34px); letter-spacing: -.01em; }
+  .section-head p { margin-top: 12px; color: var(--muted); font-size: 16px; }
+
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+  .card {
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 26px 22px; transition: .18s;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px -14px rgba(23,35,59,.18); border-color: #d3dcec; }
+  .card .icon {
+    width: 42px; height: 42px; border-radius: 10px; background: rgba(37,99,235,.09);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+    color: var(--accent); font-size: 21px;
+  }
+  .card h3 { font-size: 17px; margin-bottom: 8px; }
+  .card p { font-size: 14px; color: var(--muted); }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: center; }
+  .split + .split { margin-top: 64px; }
+  .split.reverse .shot { order: -1; }
+  .split h3 { font-size: 22px; margin-bottom: 12px; }
+  .split p { color: var(--muted); font-size: 15px; }
+  .shot {
+    border-radius: 14px; border: 1px solid var(--line); overflow: hidden;
+    box-shadow: 0 18px 44px -18px rgba(23,35,59,.22); background: var(--bg-soft);
+  }
+  .shot img { display: block; width: 100%; }
+  .tag {
+    display: inline-block; font-size: 12px; font-weight: 600; color: var(--accent);
+    background: rgba(37,99,235,.08); border-radius: 999px; padding: 3px 12px; margin-bottom: 12px;
+  }
+
+  /* ---------- feedback ---------- */
+  .feedback {
+    background: linear-gradient(135deg, #569be9, #6ea8e9);
+    color: #fff; border-radius: 20px; padding: 52px 40px; text-align: center;
+  }
+  .feedback h2 { font-size: clamp(22px, 3vw, 30px); }
+  .feedback p { margin: 14px auto 0; max-width: 600px; color: rgba(255,255,255,.95); }
+  .feedback .from {
+    margin-top: 14px; font-size: 14px; color: rgba(255,255,255,.75);
+  }
+  .feedback .btn { margin-top: 24px; font-size: 16px; padding: 13px 30px; }
+  .btn-gold { background: var(--gold); color: #fff; box-shadow: 0 4px 16px rgba(217,119,6,.35); }
+  .btn-gold:hover { background: #b45309; transform: translateY(-1px); }
+
+  /* ---------- footer ---------- */
+  footer { border-top: 1px solid var(--line); padding: 40px 0 56px; font-size: 14px; color: var(--muted); }
+  .footer-actions { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; justify-content: center; }
+  .footer-links { display: flex; gap: 24px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+  .footer-links a { color: var(--muted); } .footer-links a:hover { color: var(--ink); }
+  .versions { margin-top: 20px; }
+  .versions h2 { font-size: clamp(22px, 3vw, 30px); text-align: center; }
+  .versions ul { max-width: 560px; margin: 16px auto 0; list-style: none; }
+  .versions li { display: flex; gap: 14px; padding: 5px 0; }
+  .ver-tag {
+    flex: none; font-family: ui-monospace, monospace; font-size: 12.5px; font-weight: 600;
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 6px; padding: 1px 8px;
+    color: var(--accent); height: fit-content; margin-top: 3px;
+  }
+  .copyright { margin-top: 30px; text-align: center; font-size: 12.5px; color: #9aa3b5; }
+
+  @media (max-width: 760px) {
+    .split { grid-template-columns: 1fr; gap: 24px; }
+    .split.reverse .shot { order: 0; }
+    .hero { padding-top: 56px; }
+    .feedback { padding: 40px 22px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 10.5 17 5v14L3 13.5v-3Z" fill="#2563eb"/><path d="M17 8.5c1.8.4 3 1.8 3 3.5s-1.2 3.1-3 3.5" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/><path d="M7 14v5.5c0 .8.7 1.5 1.5 1.5S10 20.3 10 19.5V14" stroke="#2563eb" stroke-width="2"/></svg>
+      EchoWord
+    </a>
+    <nav class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#moments">使用场景</a>
+      <a href="#feedback">用户反馈</a>
+      <a href="https://github.com/pluone/EchoWord" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- hero -->
+  <div class="hero">
+    <div class="wrap">
+      <h1>让英文网页上的每个陌生单词，<br>都能<em>读出来</em>、<em>看得懂</em></h1>
+      <p class="sub">EchoWord 是一款 Chrome 浏览器扩展：悬停英文单词，弹出的不只是音标和释义，还有整句的中文翻译——并用 TTS 朗读出来。眼睛看过的词，耳朵也听过，才算真的学会了。</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/echoword/ifjpabfblikdkfgchnhdcplgbpjhoila?hl=zh-CN" target="_blank" rel="noopener">Chrome 应用商店安装</a>
+        <a class="btn btn-ghost" href="https://microsoftedge.microsoft.com/addons/detail/echoword/bfnlgfbpacnfaehogfejnkajideodcdg" target="_blank" rel="noopener">Edge 商店安装</a>
+      </div>
+      <p class="store-note">免费使用 · 仅在英文网页生效，不干扰正常浏览</p>
+    </div>
+  </div>
+
+  <!-- audience -->
+  <div class="audience">
+    <div class="wrap">
+      <span class="label">适用于谁</span>
+      <div class="audience-grid">
+        <div class="audience-item">
+          <div class="who">备考学生党</div>
+          <div class="where">四六级 · 考研 · 雅思托福，常读外刊与真题</div>
+        </div>
+        <div class="audience-item">
+          <div class="who">程序员 · 科研 · 分析师</div>
+          <div class="where">读文档、逛 Stack Overflow、arXiv</div>
+        </div>
+        <div class="audience-item">
+          <div class="who">跨境电商 · 海外运营</div>
+          <div class="where">盯 Reddit、亚马逊评论</div>
+        </div>
+        <div class="audience-item">
+          <div class="who">兴趣读者</div>
+          <div class="where">刷 BBC、Medium，把读英文当爱好</div>
+        </div>
+      </div>
+      <p class="audience-common">他们的共同点：<b>眼睛会看，嘴不会读，读过的也记不住。</b>EchoWord 就是为「哑巴英语」准备的解药。</p>
+    </div>
+  </div>
+
+  <!-- features -->
+  <section class="section" id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>一个弹窗，三件事：会读、会懂、会记</h2>
+        <p>不跳转、不打断阅读，查词这件事在句子里顺手完成。</p>
+      </div>
+      <div class="feature-grid">
+        <div class="card">
+          <div class="icon">👀</div>
+          <h3>悬停即查</h3>
+          <p>鼠标移到生词上，音标、必应词典释义与整句翻译即刻弹出；可固定卡片仔细研究。</p>
+        </div>
+        <div class="card">
+          <div class="icon">🔊</div>
+          <h3>TTS 朗读</h3>
+          <p>系统级发音朗读单词，还能朗读整句——先听单词、再听句子，语感就这样一点点堆起来。</p>
+        </div>
+        <div class="card">
+          <div class="icon">📖</div>
+          <h3>在语境中学习</h3>
+          <p>不只给出孤立释义，还翻译整句话。同一个词在不同句子里反复「发声」，比拼写十遍更记得住。</p>
+        </div>
+        <div class="card">
+          <div class="icon">⭐</div>
+          <h3>单词本</h3>
+          <p>点星标收藏单词+当下例句，附出处链接一键跳回原文定位。遇到想记的词，再也不怕忘了它在哪见的。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- moments -->
+  <section class="section" id="moments" style="padding-top:8px">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>读哪里，就练哪里</h2>
+        <p>不需要「打开一个背单词 App」——发音练习发生在你本来的阅读里。</p>
+      </div>
+
+      <div class="split">
+        <div>
+          <span class="tag">发音 · 记忆</span>
+          <h3>把「看」变成「读」</h3>
+          <p>悬停到生词上，卡片出现后自动朗读单词；开启整句朗读后，先单词后句子依次读出。朗读行为发生在你正在读的那句话里——这就是 EchoWord 解决哑巴英语的方式：不是找时间「练口语」，而是让每句正在读的英文都有机会被读出来，双重发音高效记忆。</p>
+        </div>
+        <div class="shot"><img src="assets/re1.jpeg" alt="TTS 随时朗读单词和句子，在语境中学习"></div>
+      </div>
+
+      <div class="split reverse">
+        <div>
+          <span class="tag">可定制的朗读体验</span>
+          <h3>声音、语速、音量，都听你的</h3>
+          <p>试听并选择在线高品质语音（Google、Microsoft、Nuance 等），剔除不喜欢的机械音；音量与 0.5x–2x 语速任意调节。设置页有试听入口，调好再开始读，让每一次发音都听得舒服。</p>
+        </div>
+        <div class="shot"><img src="assets/re2.jpeg" alt="TTS 配置，试听并选择在线高品质语音"></div>
+      </div>
+
+      <div class="split">
+        <div>
+          <span class="tag">随时回顾</span>
+          <h3>单词本：收藏的词，带着例句留存</h3>
+          <p>点星标收藏单词 + 当下例句，附出处链接（如 bbc.com）一键跳回原文定位。支持导出 / 导入备份，回顾时能想起每个词是在哪句话里遇到的。</p>
+        </div>
+        <div class="shot"><img src="assets/re4.jpeg" alt="单词本，随时回顾：词条附例句与出处，支持导出备份"></div>
+      </div>
+
+      <div class="split reverse">
+        <div>
+          <span class="tag">按需启用</span>
+          <h3>只在你想用的网站上工作</h3>
+          <p>按站点灵活启停：当前站点一键开关，全部网站统一管理。EchoWord 仅在英文网页生效，中文网页不受任何干扰——读中文时它保持安静，读英文时随叫随到。</p>
+        </div>
+        <div class="shot"><img src="assets/re3.jpeg" alt="插件支持灵活设置，按需启用：当前站点 / 全部网站开关"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- feedback + sponsor -->
+  <section class="section" id="feedback">
+    <div class="wrap">
+      <div class="feedback">
+        <h2>有问题？直接跟我说</h2>
+        <p>断句、声音、弹窗延迟……任何想改的地方，都欢迎直接说。</p>
+        <p class="from">我是这个插件的独立开发者，每封邮件都会亲自回复。</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="mailto:pluone@outlook.com?subject=EchoWord%20反馈与建议">✉️ 发邮件给开发者</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="versions">
+      <h2>版本记录</h2>
+      <ul>
+        <li><span class="ver-tag">v0.4.0</span><span>单词本功能上线：一键收藏词条 + 例句来源、回跳原文定位朗读、导航栏管理。</span></li>
+        <li><span class="ver-tag">v0.3.1</span><span>卡片可固定（sticky）、多种触发模式、断句选项（逗号 / 句号）、朗读顺序可选（先单词后句子）、元音音标着色、按站点启停、英文网页自动判定、后台窗口误触修复。</span></li>
+        <li><span class="ver-tag">v0.3.0</span><span>首个版本：悬停弹窗查词（必应词典）、整句翻译（谷歌 / 必应双引擎）、TTS 朗读单词与整句。</span></li>
+      </ul>
+    </div>
+
+    <p class="copyright">© 2026 EchoWord · 独立开发，每天进步一点点</p>
+  </div>
+</footer>
+
+</body>
+</html>
