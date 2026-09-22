@@ -307,10 +307,15 @@ function blockTextAndOffset(block, targetNode) {
       const child = children[i];
       if (child.nodeType === Node.TEXT_NODE) {
         if (child === targetNode) targetOffset = full.length;
-        full += child.textContent || '';
+        // 文本节点里的原生 '\n'（如 GitHub 渲染 markdown 的 <p> 保留了源码
+        // 换行）只是视觉空白、不是句子边界，归一化成空格，避免被下方
+        // isSentenceEnd 的 '\n' 规则误断。等长替换，不影响偏移映射。
+        full += (child.textContent || '').replace(/\n/g, ' ');
       } else if (child.nodeType === Node.ELEMENT_NODE) {
         const tag = child.tagName;
         if (tag === 'BR') {
+          // <br> 记作 '\n'，是行边界的专用记号（真实文本里的 '\n' 已被
+          // 上方归一化成空格），isSentenceEnd 据此按行断句。
           full += '\n';
           continue;
         }
