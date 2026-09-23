@@ -507,9 +507,7 @@ function renderPopup(word) {
   const wordLabel = chrome.i18n.getMessage('speakWordLabel');
   const sentenceLabel = chrome.i18n.getMessage('speakSentenceLabel');
   speakWordBtn.textContent = wordLabel;
-  speakWordBtn.title = wordLabel;
   speakSentenceBtn.textContent = sentenceLabel;
-  speakSentenceBtn.title = sentenceLabel;
   // 每次展示重新按内容确定宽度：解除冻结，恢复 fit-content。
   widthLocked = false;
   popupEl.style.width = '';
