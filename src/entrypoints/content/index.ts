@@ -12,6 +12,8 @@ export default defineContentScript({
 //   hover 悬停、click 点击（可带修饰键）、hover + 修饰键按下、或禁用。
 // - 点击喇叭图标（或开启「自动播放」后弹窗出现时）通过 chrome.tts 朗读。
 // - 朗读模式（speakMode）：「单词」「整句」或「先单词后整句」。
+// - 悬停目标与朗读文本都只认英文：中文页面上的英文单词同样能查、能读，
+//   读句子时只读当前词所在的连续英文片段（见 readableEnglish）。
 // - 开启「粘性弹窗」时，弹窗只在点击外部、点击 X 或按 Esc 后关闭；
 //   否则鼠标移开单词即关闭。
 
@@ -61,7 +63,9 @@ function popupModeConfig(mode) {
 
 // 英文单词字符：字母、数字、撇号、连字符。
 const WORD_CHAR = /[A-Za-z0-9'’\-]/;
-const HAS_ALNUM = /[A-Za-z0-9]/;
+// 至少要有一个字母才算「英文单词」：纯数字 token（2024、3.5）在中文页面上遍地都是，
+// 弹窗与英文朗读对它们没有意义，一律不作为悬停目标。
+const HAS_LETTER = /[A-Za-z]/;
 
 // 光标吸附容差：caretPositionFromPoint 会把空白处的光标吸附到最近的文本，
 // 只要光标落在单词包围盒外这个距离以内，仍视为悬停在单词上。
@@ -190,7 +194,7 @@ function wordAtPoint(x, y) {
   while (end < text.length && isWordChar(text[end])) end++;
 
   const word = text.slice(start, end);
-  if (!word || !HAS_ALNUM.test(word)) return null;
+  if (!word || !HAS_LETTER.test(word)) return null;
 
   // URL 里的域名、路径、slug 天然满足单词字符集（'.' '/' 只是断词符），
   // 悬停在网址上会取出 eocfcfk… 这样的伪单词、并把整条网址当成整句。
@@ -400,10 +404,10 @@ function capSentence(sentence, wordStart, wordEnd) {
   return sentence.slice(tokens[lo].start, tokens[hi - 1].end).trim();
 }
 
-// 从单词所在文本节点提取句子片段。
-// stopAtComma：朗读用，读到逗号等句内停顿即断，片段更短；
-// capWords：朗读用，片段超过 30 词时以当前词为中心截取（翻译不用，保留整段）。
-function sentenceFromWord(info, { stopAtComma = false, capWords = true } = {}) {
+// 从单词所在文本节点提取句子片段，返回片段文本与当前词在片段中的偏移
+// （偏移用于以当前词为中心截取、以及抽取英文片段时定位锚点）。
+// stopAtComma：朗读用，读到逗号等句内停顿即断，片段更短；翻译读完整整句。
+function sentenceParts(info, { stopAtComma = false } = {}) {
   // 最近 block 级祖先即遍历边界，避免跨段落获取不相关文本。
   let block = info.node.parentElement;
   while (block && !isBlockLevel(block)) block = block.parentElement;
@@ -435,23 +439,98 @@ function sentenceFromWord(info, { stopAtComma = false, capWords = true } = {}) {
 
   const raw = text.slice(s, e);
   const { text: sentence, lead } = cleanSentence(raw);
-  if (!sentence) return info.word;
-  if (!capWords) return sentence;
-  return capSentence(sentence, wordStart - s - lead, wordEnd - s - lead);
+  // 取不到片段（如孤立单词）时退化为单词本身，锚点即词首。
+  if (!sentence) return { text: info.word, anchor: 0 };
+  return { text: sentence, anchor: wordStart - s - lead };
 }
 
-// 朗读用句子片段：按断句选项（sentenceBreak）断到句号或逗号，超过 30 词时截取。
-// 翻译仍走 sentenceForTranslation（始终读完整整句，不受该选项影响）。
+// 非英文内容的判定：片段里出现这些字符就按中英混排处理，只读其中的英文片段。
+// 覆盖 CJK（汉字/假名/谚文/全角标点——中文页面即此类）、西里尔、希伯来、阿拉伯、
+// 天城文、泰文等。希腊字母不在其列：英文技术写作里 α、σ 这类符号很常见，箭头、
+// emoji、数学符号同理，都不能因此把整句判成混排。
+const NON_ENGLISH =
+  /[\u0400-\u04FF\u0530-\u058F\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u0900-\u097F\u0E00-\u0E7F\u1100-\u11FF\u2E80-\u303F\u3040-\u30FF\u3130-\u318F\u31F0-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uA960-\uA97F\uAC00-\uD7AF\uF900-\uFAFF\uFE10-\uFE1F\uFE30-\uFE4F\uFF00-\uFFEF]/;
+
+// 英文片段的内容字符：ASCII 可打印字符与制表符，加上英文文本里合法的拉丁扩展字母
+// （café、naïve）与排版符号（弯引号 ’ “ ”，破折号 – —，省略号 …）。逗号、括号、
+// 斜杠这些在英文里就是词间连接，不断开片段；真正断开的是非英文文种字符（CJK、全角
+// 标点，见 NON_ENGLISH）与下面的句末标点。
+const RUN_CHAR =
+  /[\x20-\x7E\t\u00A0-\u024F\u1E00-\u1EFF\u2018\u2019\u201C\u201D\u2013\u2014\u2026\u00AB\u00BB\u2039\u203A]/;
+const RUN_STOP = /[.!?]/;
+// 片段首尾的剥离判据：拉丁字母（含带音标字母）、数字、撇号、连字符。比 WORD_CHAR 宽
+// ——悬停词只能落在 ASCII 词形上，但片段里可以含 café 这类拉丁扩展字母，不能被剥掉。
+const RUN_WORD_CHAR = /[\p{Script=Latin}\p{N}'\u2019\-]/u;
+
+// 抽取当前词所在的连续英文片段，返回片段文本与当前词在其中的偏移。
+// 片段内空白归一为单空格，首尾标点剥掉，首尾不含字母的纯数字词（"Calibration Head 2"）
+// 剔除。中英混排片段里中文与全角标点即断，于是悬停 Head 读 "Calibration Head"；
+// 而 "the model, trained on X, achieves Y" 这类英文引用会整段保留。
+function englishRunAt(text, anchor) {
+  const at = Math.max(0, Math.min(anchor, text.length));
+  const isRunChar = (ch) => !!ch && RUN_CHAR.test(ch) && !RUN_STOP.test(ch);
+
+  let s = at;
+  let e = at;
+  while (s > 0 && isRunChar(text[s - 1])) s--;
+  while (e < text.length && isRunChar(text[e])) e++;
+
+  // 首尾的标点（括号、引号、逗号等）不属于片段内容，先剥掉。
+  while (s < e && !RUN_WORD_CHAR.test(text[s])) s++;
+  while (e > s && !RUN_WORD_CHAR.test(text[e - 1])) e--;
+
+  // 按空白切词并记录各自起点，剔除首尾纯数字词后重算片段起点。
+  const words = [];
+  const re = /\S+/g;
+  let m;
+  while ((m = re.exec(text.slice(s, e))) !== null) {
+    words.push({ text: m[0], start: s + m.index });
+  }
+  while (words.length > 1 && !HAS_LETTER.test(words[0].text)) words.shift();
+  while (words.length > 1 && !HAS_LETTER.test(words[words.length - 1].text)) words.pop();
+  if (!words.length) return { text: '', anchor: 0 };
+
+  return {
+    text: words.map((w) => w.text).join(' '),
+    anchor: Math.max(0, at - words[0].start),
+  };
+}
+
+// 片段里真正可读的英文文本。纯英文片段（英文页面、中文页面里引用的整段英文）原样
+// 返回，与英文页面的既有口径完全一致；含非英文文种字符的片段只取当前词所在的连续
+// 英文片段。
+function readableEnglish(info, { stopAtComma, capWords }) {
+  const { text, anchor } = sentenceParts(info, { stopAtComma });
+  const word = String(info.word || '');
+
+  // 纯英文片段：沿用断句 + 30 词截取口径。
+  if (!NON_ENGLISH.test(text)) {
+    if (!text) return '';
+    return capWords ? capSentence(text, anchor, anchor + word.length) : text;
+  }
+
+  // 混排片段：抽出的片段就是当前词本身时没有额外上下文（释义已覆盖），视作没有句子：
+  // 隐藏朗读句子按钮与翻译行，word_sentence 模式也不会把同一个词读两遍。
+  const run = englishRunAt(text, anchor);
+  if (!run.text || run.text.toLowerCase() === word.toLowerCase()) return '';
+  return capWords
+    ? capSentence(run.text, run.anchor, run.anchor + word.length)
+    : run.text;
+}
+
+// 朗读用文本：纯英文片段按断句选项（sentenceBreak）断到句号或逗号，超过 30 词时截取；
+// 中英混排片段按英文边界取片段，不受该选项影响。翻译走 sentenceForTranslation。
 function sentenceForSpeak(info) {
-  return sentenceFromWord(info, {
+  return readableEnglish(info, {
     stopAtComma: cfg.sentenceBreak === 'comma',
     capWords: true,
   });
 }
 
-// 翻译用整句：断到句末标点，不截取（保留完整整句）。
+// 翻译用文本：断到句末标点，不截取（保留完整整句）。中英混排页面上取抽出的英文
+// 片段，不把中文整句送进硬编码 en→zh 的翻译接口。
 function sentenceForTranslation(info) {
-  return sentenceFromWord(info, { stopAtComma: false, capWords: false });
+  return readableEnglish(info, { stopAtComma: false, capWords: false });
 }
 
 // ---------- 朗读 ----------
@@ -718,15 +797,17 @@ function showPopup(info) {
   positionPopup(info);
   visible = true;
   // 翻译用整句：读到句末标点、不做 30 词截取；朗读用的片段与之不同，在 speakFor 里单独提取。
+  // 中英混排页面上两者都是抽出的英文片段（见 readableEnglish）。
   const sentence = sentenceForTranslation(info);
   activeSentence = sentence;
-  // 没有句子上下文（如标题、孤立单词）时隐藏朗读句子按钮，分割线随之隐藏。
+  // 没有句子上下文（如标题、孤立单词、抽出的片段就是单词本身）时隐藏朗读句子按钮，
+  // 分割线随之隐藏，也不发翻译请求：释义已覆盖该词，中文整句送翻译接口没有意义。
   speakSentenceBtn.hidden = !sentenceForSpeak(info);
   shadow.querySelector<HTMLElement>('.foot .divider').hidden = speakSentenceBtn.hidden;
   // 同步收藏态所需上下文：例句用于保存、译文缓存在 renderTranslation 更新。
   savedSentence = sentence;
   lastTranslation = null;
-  loadTranslation(sentence);
+  if (sentence) loadTranslation(sentence);
   loadDict(info.word);
   // 异步查询该 (word, page) 是否已收藏：查询未返回前先渲染成未收藏描边星。
   loadSaveState(info.word);
@@ -1300,76 +1381,15 @@ function siteAllowedFor(mode, siteDisabled, siteEnabled) {
     : !isSiteIn(siteDisabled);
 }
 
-// lang 属性是否声明为英文（en / en-US / en-GB 等）。
-function isEnglishLang(langAttr) {
-  const l = (langAttr || '').trim().toLowerCase();
-  return l === 'en' || l.startsWith('en-') || l.startsWith('en_');
-}
-
-// 正文采样判定页面是否英文：lang 属性缺失时才调用。遍历 body 下有限个
-// 可见文本节点，累计英文字母与非空白字符的占比，高于阈值则视为英文页。
-// 采样上限到点即停，避免大页面卡顿；采样为空（页面几乎无文本）时保守视为英文。
-const SAMPLE_MAX_LETTERS = 2000; // 累计采样字母上限，到点即停
-const SAMPLE_MAX_NODES = 800; // 访问节点上限，同上
-const EN_RATIO_THRESHOLD = 0.8; // 英文字母占非空白字符的比例阈值
-
-function sampleBodyIsEnglish() {
-  const body = document.body;
-  if (!body) return true;
-  let letters = 0;
-  let nonspace = 0;
-  let visited = 0;
-
-  const walk = (el) => {
-    if (letters >= SAMPLE_MAX_LETTERS || visited >= SAMPLE_MAX_NODES) return;
-    const children = el.childNodes;
-    for (let i = 0; i < children.length; i++) {
-      if (letters >= SAMPLE_MAX_LETTERS || visited >= SAMPLE_MAX_NODES) return;
-      visited++;
-      const child = children[i];
-      if (child.nodeType === Node.TEXT_NODE) {
-        const text = child.textContent || '';
-        for (let j = 0; j < text.length; j++) {
-          const ch = text[j];
-          if (!/\s/.test(ch)) {
-            nonspace++;
-            if (/[A-Za-z]/.test(ch)) letters++;
-          }
-        }
-      } else if (child.nodeType === Node.ELEMENT_NODE) {
-        const tag = child.tagName;
-        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT' || tag === 'TEMPLATE') {
-          continue;
-        }
-        const style = getComputedStyle(child);
-        if (style.display === 'none' || style.visibility === 'hidden') continue;
-        walk(child);
-      }
-    }
-  };
-
-  walk(body);
-  return nonspace === 0 || letters / nonspace >= EN_RATIO_THRESHOLD;
-}
-
-// 是否判定为英文网页：优先 lang 属性；缺失时正文采样兜底。
-function isEnglishPage() {
-  const langAttr = (document.documentElement && document.documentElement.lang) || '';
-  if (langAttr.trim()) return isEnglishLang(langAttr);
-  return sampleBodyIsEnglish();
-}
-
 // 站点是否启用（随站点模式与启停列表实时更新，仅此一个来源）。
 let siteAllowed = false;
-// 页面是否判定为英文（加载时判定一次，无需监听 DOM 变化）。
-let pageIsEnglish = false;
 
-// 合并「站点启用」与「页面是英文」两个条件，决定最终启用态。
+// 最终启用态只由站点启停决定。页面语言不再设闸门：中文页面上的英文单词同样要能
+// 悬停查询与朗读，读哪些文本由 readableEnglish 按片段判定。
 function updateActive() {
-  const on = siteAllowed && pageIsEnglish;
-  if (on === enabled) return;
-  enabled = on;
-  if (!on) hidePopup();
+  if (siteAllowed === enabled) return;
+  enabled = siteAllowed;
+  if (!enabled) hidePopup();
 }
 
 // 站点启停与选项都存在 storage.local，首次加载时一并读取。
@@ -1377,14 +1397,12 @@ chrome.storage.local.get(
   { ...DEFAULT_OPTIONS, siteMode: 'blacklist', siteDisabled: [], siteEnabled: [] },
   (items) => {
     applyConfig(items);
-    pageIsEnglish = isEnglishPage();
-    console.log('isEnglishPage', pageIsEnglish);
     siteAllowed = siteAllowedFor(items.siteMode, items.siteDisabled, items.siteEnabled);
     updateActive();
   }
 );
 
-// 站点启用信号依赖的三个键之一变化时重算，英文判定不随它们变。
+// 站点启用信号依赖的三个键之一变化时重算。
 const SITE_KEYS = ['siteMode', 'siteDisabled', 'siteEnabled'];
 
 chrome.storage.onChanged.addListener((changes, area) => {
