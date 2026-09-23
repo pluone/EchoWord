@@ -148,6 +148,31 @@ function caretAtPoint(x, y) {
   return null;
 }
 
+// 块长上限：超长块直接放弃 URL 判定，避免极端页面上引入可观开销。
+const MAX_URL_CHUNK = 2048;
+// http/https 开头的链接（贪婪到空白为止，尾部标点一并吃掉，不影响覆盖判定）。
+const URL_IN_TEXT = /\bhttps?:\/\/[^\s]+/gi;
+
+// 文本范围 [start, end) 是否落在同一个非空白块内的 http(s) 链接里。
+// 只看同一文本节点：块在节点边界断开，跨节点的链接不在此判定范围。
+function isInsideUrl(text, start, end) {
+  let chunkStart = start;
+  while (chunkStart > 0 && !/\s/.test(text[chunkStart - 1])) chunkStart--;
+  let chunkEnd = end;
+  while (chunkEnd < text.length && !/\s/.test(text[chunkEnd])) chunkEnd++;
+  if (chunkEnd - chunkStart > MAX_URL_CHUNK) return false;
+
+  const chunk = text.slice(chunkStart, chunkEnd);
+  const tokenLo = start - chunkStart;
+  const tokenHi = end - chunkStart;
+  URL_IN_TEXT.lastIndex = 0;
+  let m;
+  while ((m = URL_IN_TEXT.exec(chunk)) !== null) {
+    if (m.index <= tokenLo && tokenHi <= m.index + m[0].length) return true;
+  }
+  return false;
+}
+
 // 从光标位置扩展出所在的英文单词。
 function wordAtPoint(x, y) {
   const pos = caretAtPoint(x, y);
@@ -166,6 +191,11 @@ function wordAtPoint(x, y) {
 
   const word = text.slice(start, end);
   if (!word || !HAS_ALNUM.test(word)) return null;
+
+  // URL 里的域名、路径、slug 天然满足单词字符集（'.' '/' 只是断词符），
+  // 悬停在网址上会取出 eocfcfk… 这样的伪单词、并把整条网址当成整句。
+  // 这里按「最大非空白块」判定：token 落在块内的 http(s) 链接区间里就不算单词。
+  if (isInsideUrl(text, start, end)) return null;
 
   // caretPositionFromPoint 会把空白处（左右页边、行间）的光标吸附到最近的文本，
   // 若不校验几何位置，鼠标在阅读区两侧空白与单词所在行平行时也会误触发朗读。
@@ -876,6 +906,11 @@ document.addEventListener(
       : event.target === host;
     if (inside) return;
     if (isEditable(event.target)) return;
+    // 点击超链接会离开当前页面（同页跳转或新标签），弹窗没有意义，一律不响应。
+    // 用 composedPath 而非 event.target.closest：页面自身 Shadow DOM 里的事件
+    // target 会被重定向到 shadow host，closest 找不到链接。
+    const path = (event.composedPath ? event.composedPath() : [event.target]) as any[];
+    if (path.some((n) => n && n.nodeType === Node.ELEMENT_NODE && n.tagName === 'A')) return;
 
     // 需要修饰键的模式：未按下对应键则不触发。
     if (mode.alt && !event.altKey) return;
