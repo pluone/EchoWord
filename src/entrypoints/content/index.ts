@@ -866,6 +866,12 @@ document.addEventListener(
       scheduleHide();
       return;
     }
+    // 按住左键（拖选文字、拖动元素、拖滚动条）期间不触发悬停：
+    // 途中的 mousemove 不是一次「有意的悬停」，弹窗还会盖住正在选的内容，
+    // 而宿主没有 pointer-events:none，压在光标下甚至会把 mouseup 吃掉、截断选区。
+    // 用事件自带的 buttons 位掩码而非自己维护按下标志：窗口外松开、失焦、
+    // 右键菜单、原生拖放结束都不会残留状态，无需配 mouseup 监听器。
+    if (event.buttons & 1) return;
     handleMove(event, event.clientX, event.clientY);
   },
   { capture: true, passive: true }
@@ -906,6 +912,12 @@ document.addEventListener(
       : event.target === host;
     if (inside) return;
     if (isEditable(event.target)) return;
+    // 拖选、双击、三击、Shift+点击都会在 mouseup 之后补发一次 click：这些手势
+    // 是「选中一段文字」而不是「点一下这个词」，不弹窗。判据用它足够准——普通单击
+    // 在 mousedown 的默认动作里已把旧选区折叠掉，所以 click 时刻仍挂着非空选区，
+    // 只可能来自本次手势刚刚造出的选区。
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) return;
     // 点击超链接会离开当前页面（同页跳转或新标签），弹窗没有意义，一律不响应。
     // 用 composedPath 而非 event.target.closest：页面自身 Shadow DOM 里的事件
     // target 会被重定向到 shadow host，closest 找不到链接。
@@ -932,7 +944,12 @@ document.addEventListener(
 document.addEventListener(
   'mousedown',
   (event) => {
-    if (!enabled || !visible) return;
+    if (!enabled) return;
+    // 左键按下 = 可能要开始拖选文字：先取消尚在等待中的悬停弹窗。
+    // 这一步必须在 visible 判断之前——弹窗还没显示时下面原本直接 return，
+    // 于是按下前排定的定时器会在拖选中途照常触发（见 mousemove 里的 buttons 门槛）。
+    if (event.button === 0) clearShow();
+    if (!visible) return;
     const inside = event.composedPath
       ? event.composedPath().includes(host)
       : event.target === host;
