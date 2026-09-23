@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-EchoWord —— Chrome 扩展（Manifest V3）：悬停/点击英文单词弹出卡片（音标、必应词典释义、整句中文翻译），并用系统 TTS 朗读。基于 WXT 框架 + TypeScript，源码在 `src/`（entrypoints + public），构建产物流向 `dist/`。运行时无第三方依赖，只用 `chrome.*` API；有 npm 构建工具链。
+EchoWord —— Chrome 扩展（Manifest V3）：悬停/点击英文单词弹出卡片（音标、必应词典释义、整句中文翻译），并用系统 TTS 朗读。不限英文页面：中文页面上的英文单词同样能查能读（读句子时只读该词所在的连续英文片段）。基于 WXT 框架 + TypeScript，源码在 `src/`（entrypoints + public），构建产物流向 `dist/`。运行时无第三方依赖，只用 `chrome.*` API；有 npm 构建工具链。
 
 ## 常用命令
 
@@ -19,7 +19,7 @@ EchoWord —— Chrome 扩展（Manifest V3）：悬停/点击英文单词弹出
 
 ## 架构（需跨文件理解的部分）
 
-- **`src/entrypoints/content/index.ts`** — 核心。整段逻辑包在 `defineContentScript({ matches: ['<all_urls>'], runAt: 'document_idle' })` 的 `main()` 里。Shadow DOM 弹窗宿主；鼠标事件状态机（`scheduleShow`/`scheduleHide`/`showTimer`/`hideTimer`）；`wordAtPoint` 用 `caretPositionFromPoint` + 几何包围盒（`POINT_TOLERANCE=6px`）识别单词；同一文本按两种口径提取：翻译用整句 `sentenceForTranslation`（读到句末标点、不截取），朗读用片段 `sentenceForSpeak`（按 `sentenceBreak` 配置断句：comma 断到逗号 / period 断到句号，始终 30 词截取），底层的 `sentenceFromWord(info, {stopAtComma, capWords})` 参数化实现；通过 `chrome.runtime.sendMessage` 调后台。
+- **`src/entrypoints/content/index.ts`** — 核心。整段逻辑包在 `defineContentScript({ matches: ['<all_urls>'], runAt: 'document_idle' })` 的 `main()` 里。Shadow DOM 弹窗宿主；鼠标事件状态机（`scheduleShow`/`scheduleHide`/`showTimer`/`hideTimer`）；`wordAtPoint` 用 `caretPositionFromPoint` + 几何包围盒（`POINT_TOLERANCE=6px`）识别单词；可读文本提取分三层：`sentenceParts(info, {stopAtComma})` 取 block 内片段并返回 `{text, anchor}`（anchor = 当前词在片段中的偏移，供截取与片段抽取用）；`readableEnglish(info, {stopAtComma, capWords})` 决定「真正可读的英文文本」（见下文「启用与可读文本判定」）；`sentenceForSpeak` / `sentenceForTranslation` 是它的两个口径——朗读 30 词截取、翻译不截取；通过 `chrome.runtime.sendMessage` 调后台。
 - **`src/entrypoints/background/index.ts`** — MV3 service worker。整段包在 `defineBackground(() => {})` 里。`chrome.tts` 朗读（过滤 macOS 搞笑音/机械音）；必应词典 fetch + 离屏解析 + 双层缓存；整句翻译（谷歌免费接口 / 必应 `ttranslatev3` token 流）；消息路由。
 - **`src/entrypoints/offscreen/index.html` + `main.ts`** — 离屏文档。未列名页面（不进 manifest），由 background 按需创建：`chrome.offscreen.createDocument({ url: chrome.runtime.getURL('/offscreen.html'), reasons: ['DOM_PARSER'], ... })`。MV3 SW 无 DOMParser，解析必应词典 HTML（选择器参考 Saladict）。
 - `src/entrypoints/wordbook/` — 单词本页面（`index.html` + `main.ts`，新标签页打开）。展示收藏的单词：音标快照、释义快照（收藏时缓存，离线可回顾）、每条来源例句；词条和例句均可单独朗读（`speak` 消息走 TTS 管线）、可单独删除（来源删空时 background 自动删整个词条）。出处链接总是新开标签，URL 带 `?echoword_reveal=<sid>`，由内容脚本定位例句在原页面的位置并临时闪现高亮。
@@ -35,11 +35,11 @@ EchoWord —— Chrome 扩展（Manifest V3）：悬停/点击英文单词弹出
 - **消息协议**：content→background 的 `type` 为 `speak` / `speakSequence` / `stop` / `lookup` / `translate` / `getVoices` / `wordbookCheck` / `wordbookAdd` / `wordbookRemove` / `wordbookGetData` / `wordbookGetSource` / `wordbookDeleteWord` / `wordbookRemoveSource`；background→offscreen 为 `parseDictHtml`。`speakSequence`（先单词后整句）在 background 里通过 TTS `onEvent` 的 `end` 事件确定单词发音结束后再延迟 `gap` 朗读整句。异步响应需在监听器里 `return true` 保活消息通道。
 - **配置存 `chrome.storage.local`**：`voiceName, volume, rate, hoverDelay, autoSpeak, speakMode, sentenceBreak, stickyPopup, translator, phonetics, popupMode, siteMode, siteDisabled, siteEnabled, excludedVoices, dictCache, wordbook`。content 脚本用 `chrome.storage.onChanged` 实时应用配置。`speakMode` 由 options 页两个复选框推导（`sentenceSpeak` + `wordFirst` → word / sentence / word_sentence）；`sentenceBreak` 是「朗读整句时，如何断句」单选（comma / period，默认 period）。
 - **悬停状态机规则**：光标落在同一单词（node+start+end 相同）不重置定时器；落到空白 `scheduleHide` 取消定时器；**窗口不活跃时（`!document.hasFocus()`）不响应悬停**——macOS Chrome 抑制后台窗口连续 `mousemove`，只投递一次入口事件，这正是边界词误触发的根因；光标离开文档 / 窗口失焦时清理悬停状态。改这块逻辑务必看 `docs/technical/bugfix-hover-trigger-at-window-boundary.md`。
-- **弹窗样式**：Shadow DOM + 内联 `!important` 抗页面样式；宽度首次内容加载后冻结为像素（`lockPopupWidth`）。
+- **弹窗样式**：Shadow DOM + 内联 `!important` 抗页面样式；宽度首次内容加载后冻结为像素（`ensurePopupWidth` / `widthLocked`）。
 - **词典缓存**：background 内存 + storage.local（`DICT_CACHE_MAX=300` LRU）；content 也有一份内存缓存。翻译缓存只存成功结果。
 - **单词本**：存 `chrome.storage.local` 的 `wordbook` key（软上限 `WORDBOOK_MAX_ENTRIES=2000`，超限时按时间淘汰旧词条，守护 storage 10MB 配额）。background 里所有读写经一个串行队列（`runInWordbookQueue`）避免并发写冲突。数据结构是「一词一条、多句子来源」：每词条含单词 + 音标/释义快照 + `sources[]`（每条一个例句 + 翻译 + 出处页面 URL/标题 + `sid`）。content 里词条/例句/来源三态状态机（off / part / starred）驱动弹窗星标：描边=未收藏、淡金填充（part）=词条已收藏本句未收、金色填充（starred）=本句已收藏。
-- **例句定位（reveal）**：单词本点击出处链接新开标签，URL 追加 `?echoword_reveal=<sid>`；content 脚本检测该参数，按 `sid` 在原页面文本节点中定位例句（全文逐文本节点拼接匹配），并临时闪现高亮（约 2 秒）。
-- **英文页判定**：content 双重闸门才启用——站点启用且页面判定为英文（`enabled = siteAllowed && pageIsEnglish`）。`siteAllowed` 由站点模式（`siteMode`）决定：黑名单=不在 `siteDisabled` 即启用，白名单=在 `siteEnabled` 才启用（见 `siteAllowedFor`）。英文判定先看 `<html lang>`，缺失时抽样正文看英文字母占比（`sampleBodyIsEnglish`）。非英文页整个不响应事件。
+- **例句定位（reveal）**：单词本点击出处链接新开标签，URL 追加 `?echoword_reveal=<sid>`；content 脚本检测该参数，按 `sid` 在原页面文本节点中定位例句（全文逐文本节点拼接匹配），并临时闪现高亮（约 2 秒）。匹配是宽松空白正则取**首处**命中：中英混排页面上保存的例句是抽出的英文片段（见上），短片段可能落在页面里更早的同名片段上，是已知取舍。
+- **启用与可读文本判定**：`enabled = siteAllowed`，**没有页面语言闸门**——中文页面上的英文单词同样响应。`siteAllowed` 由站点模式（`siteMode`）决定：黑名单=不在 `siteDisabled` 即启用，白名单=在 `siteEnabled` 才启用（见 `siteAllowedFor`）。悬停目标只认含字母的词形（`HAS_LETTER`，`2024` 这类纯数字 token 不触发），悬停中文无反应（`WORD_CHAR` 不含 CJK）。读什么文本按**片段**判定（`readableEnglish`）：片段不含非英文文种字符时原样返回（英文页面 = 既有口径：`sentenceBreak` 断句 + 30 词截取）；含 `NON_ENGLISH`（CJK、西里尔、全角标点等）时只取当前词所在的**连续英文片段**（`englishRunAt`：ASCII 可打印字符与拉丁扩展字母为内容，中文/全角标点/句末标点即断，首尾标点与纯数字词剥掉）—— 悬停 `Head` 读 `Calibration Head`。抽出的片段等于当前词本身时视为没有句子：隐藏朗读句子按钮与翻译行、不发翻译请求（否则 `word_sentence` 会把同一个词读两遍）。希腊字母、箭头、emoji 不算混排信号——英文技术文里常见，不能因此把整句判成混排。例句快照（`savedSentence`）与翻译文本同为该片段，二者与 `activeSentence` 必须保持同值（收藏态的过期判定依赖它）。
 - **必应翻译**：需要先抓 `bing.com/translator` 解析 IG/IID/token（有有效期），子域跟随重定向（大陆 `cn.bing.com`），并发共享同一次抓取。
 - **开发注意**：WXT dev 模式 content script HMR 会重跑 `main()`，可能重复挂 host——开发时以整页刷新为准；生产构建不受影响。
 
