@@ -146,11 +146,13 @@
   .versions h2 { font-size: clamp(22px, 3vw, 30px); text-align: center; }
   .versions ul { max-width: 560px; margin: 16px auto 0; list-style: none; }
   .versions li { display: flex; gap: 14px; padding: 5px 0; }
+  .ver-meta { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 3px; }
   .ver-tag {
-    flex: none; font-family: ui-monospace, monospace; font-size: 12.5px; font-weight: 600;
+    font-family: ui-monospace, monospace; font-size: 12.5px; font-weight: 600;
     background: var(--bg-soft); border: 1px solid var(--line); border-radius: 6px; padding: 1px 8px;
-    color: var(--accent); height: fit-content; margin-top: 3px;
+    color: var(--accent);
   }
+  .ver-date { font-family: ui-monospace, monospace; font-size: 12px; color: #9aa3b5; }
   .copyright { margin-top: 30px; text-align: center; font-size: 12.5px; color: #9aa3b5; }
 
   @media (max-width: 760px) {
@@ -318,9 +320,10 @@
     <div class="versions">
       <h2>版本记录</h2>
       <ul>
-        <li><span class="ver-tag">v0.4.0</span><span>单词本功能上线：一键收藏词条 + 例句来源、回跳原文定位朗读、导航栏管理。</span></li>
-        <li><span class="ver-tag">v0.3.1</span><span>卡片可固定（sticky）、多种触发模式、断句选项（逗号 / 句号）、朗读顺序可选（先单词后句子）、元音音标着色、按站点启停、英文网页自动判定、后台窗口误触修复。</span></li>
-        <li><span class="ver-tag">v0.3.0</span><span>首个版本：悬停弹窗查词（必应词典）、整句翻译（谷歌 / 必应双引擎）、TTS 朗读单词与整句。</span></li>
+        <li><span class="ver-meta"><span class="ver-tag">v0.4.1</span><span class="ver-date">2026-09-27</span></span><span>修复以下问题：1. 修复 github markdown 软换行识别错误导致切分句子错误问题；2. http 网址悬停时不进行弹窗；3. 拖选过程中不触发弹窗；4.支持中文页面；</span></li>
+        <li><span class="ver-meta"><span class="ver-tag">v0.4.0</span><span class="ver-date">2026-09-17</span></span><span>单词本功能上线：一键收藏词条 + 例句来源、回跳原文定位朗读、导航栏管理。</span></li>
+        <li><span class="ver-meta"><span class="ver-tag">v0.3.1</span><span class="ver-date">2026-08-27</span></span><span>卡片可固定（sticky）、多种触发模式、断句选项（逗号 / 句号）、朗读顺序可选（先单词后句子）、元音音标着色、按站点启停、英文网页自动判定、后台窗口误触修复。</span></li>
+        <li><span class="ver-meta"><span class="ver-tag">v0.3.0</span><span class="ver-date">2026-08-26</span></span><span>首个版本：悬停弹窗查词（必应词典）、整句翻译（谷歌 / 必应双引擎）、TTS 朗读单词与整句。</span></li>
       </ul>
     </div>
 
