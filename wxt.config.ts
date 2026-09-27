@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: {
     name: '__MSG_extName__',
     description: '__MSG_extDescription__',
-    version: '0.4.0',
+    version: '0.4.1',
     default_locale: 'zh_CN',
     homepage_url: 'https://echo-word.pages.dev',
     permissions: ['tts', 'storage', 'activeTab', 'offscreen'],
